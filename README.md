@@ -79,6 +79,40 @@ Excel'de ayrı bir sayfa alış için, ayrı bir sayfa satış için. Defterde d
 
 <br>
 
+## 🚀 Özelliklere Yakından Bakış
+
+**📥 Telefon Alış**
+Telefonları saniyeler içinde sisteme ekleyin. Alış fiyatı, IMEI, depolama, kozmetik ve garanti bilgilerini tek ekrandan yönetin.
+
+**💰 Telefon Satış**
+Satılan telefonlar otomatik olarak stoktan düşer, kâr hesabı otomatik yapılır. Geçmiş satış kayıtlarına istediğiniz an ulaşırsınız.
+
+**🧾 Telefon Bazlı Masraf**
+Kargo, bakım, ekran değişimi, işçilik — her telefona istediğiniz masrafı ekleyin, gerçek maliyetinizi görün.
+
+**💬 WhatsApp Paylaşımı**
+Tek tıkla WhatsApp'ta paylaşın. Model, depolama, kozmetik, pil sağlığı, menşei ve fiyat otomatik hazırlanır.
+
+**🛡️ Garanti Takibi**
+Satılan telefonların garanti süresini, başlangıç ve bitiş tarihlerini kolayca takip edin.
+
+**📊 Kasa Yönetimi**
+Toplam alış, satış, kâr ve gider bilgilerinizi tek ekranda görün.
+
+**📂 Veri Yönetimi**
+Veritabanınızı güvenle yedekleyin, ihtiyaç halinde tek tıkla geri yükleyin.
+
+**🔄 Otomatik Güncelleme**
+Yeni sürüm çıktığında uygulama otomatik algılar, tekrar kurulum yapmadan tek tıkla güncellersiniz. Verileriniz korunur.
+
+**🔒 Offline Çalışma**
+Tüm veriler bilgisayarınızda saklanır. İnternet olmasa da çalışmaya devam eder.
+
+**💳 Lisans Sistemi**
+Tek seferlik lisansla süresiz kullanın. Bilgisayar değiştirirseniz lisans transferi yapılır.
+
+<br>
+
 ## 🎯 Kimler İçin?
 
 <div align="center">
