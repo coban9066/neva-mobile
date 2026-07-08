@@ -85,16 +85,13 @@ try {
   fs.mkdirSync(musteriDir, { recursive: true });
   fs.mkdirSync(gelistiriciDir, { recursive: true });
 
-  // 6. Copy customer binaries
+  // 6. Copy customer binaries — yalnız NSIS (.exe); auto-update sessiz kurulumu
+  //    tam olarak NSIS'te desteklendiği için MSI build edilmiyor.
   console.log("Copying NEVA MOBILE customer setup binaries...");
   const nsisDir = path.resolve(appDir, "src-tauri", "target", "release", "bundle", "nsis");
-  const msiDir = path.resolve(appDir, "src-tauri", "target", "release", "bundle", "msi");
   const setupName = `${PRODUCT_NAME}_${APP_VERSION}_x64-setup.exe`;
-  const msiName = `${PRODUCT_NAME}_${APP_VERSION}_x64_en-US.msi`;
   const setupSrc = path.resolve(nsisDir, setupName);
-  const msiSrc = path.resolve(msiDir, msiName);
   fs.copyFileSync(setupSrc, path.resolve(musteriDir, "NEVA MOBILE Setup.exe"));
-  fs.copyFileSync(msiSrc, path.resolve(musteriDir, "NEVA MOBILE.msi"));
 
   // 7. Copy developer binaries
   console.log("Copying NEVA LICENSE MANAGER developer binaries...");
@@ -117,7 +114,7 @@ try {
   const readmeMusteriContent = 
 `=== NEVA MOBILE (Müşteri Kurulum Paketi) ===
 
-1. "NEVA MOBILE Setup.exe" (veya "NEVA MOBILE.msi") dosyasını çift tıklayarak çalıştırın.
+1. "NEVA MOBILE Setup.exe" dosyasını çift tıklayarak çalıştırın.
 2. Kurulum bittikten sonra uygulamayı açın.
 3. İlk açılışta karşınıza çıkacak olan "Cihaz Kimliğini" (Machine ID) kopyalayıp satıcınıza iletin.
 4. Size verilecek olan Lisans Kodunu yapıştırarak uygulamayı kullanmaya başlayabilirsiniz.
