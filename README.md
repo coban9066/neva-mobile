@@ -39,6 +39,7 @@
 - Telefon Satış Yönetimi
 - IMEI Yönetimi
 - Kâr Hesaplama
+- WhatsApp'ta Paylaş
 
 </td>
 <td width="33%" valign="top">
@@ -88,49 +89,6 @@
 | Offline Çalışma | ✓ | ✓ |
 | Lisans / Cihaz Güvenliği | ✗ | ✓ |
 | Telefoncuya Özel Tasarım | ✗ | ✓ |
-
-<br>
-
-## 🖼️ Ekran Görüntüleri
-
-<div align="center">
-
-<table>
-<tr>
-<td align="center" width="50%">
-
-*Dashboard*
-<br>
-<img src="https://via.placeholder.com/480x300/1e293b/94a3b8?text=Dashboard" width="100%" />
-
-</td>
-<td align="center" width="50%">
-
-*Telefonlar*
-<br>
-<img src="https://via.placeholder.com/480x300/1e293b/94a3b8?text=Telefonlar" width="100%" />
-
-</td>
-</tr>
-<tr>
-<td align="center" width="50%">
-
-*Satış*
-<br>
-<img src="https://via.placeholder.com/480x300/1e293b/94a3b8?text=Sat%C4%B1%C5%9F" width="100%" />
-
-</td>
-<td align="center" width="50%">
-
-*Kasa*
-<br>
-<img src="https://via.placeholder.com/480x300/1e293b/94a3b8?text=Kasa" width="100%" />
-
-</td>
-</tr>
-</table>
-
-</div>
 
 <br>
 
