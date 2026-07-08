@@ -1,72 +1,81 @@
 # NEVA MOBILE
 
-**Telefon alım satımı yapan işletmeler için geliştirilen, tamamen offline profesyonel masaüstü yazılımı.**
+Telefon alım satımı yapan işletmeler için geliştirilen tamamen offline çalışan profesyonel masaüstü yönetim yazılımı.
 
-[![Latest Release](https://img.shields.io/github/v/release/coban9066/neva-mobile?label=Son%20S%C3%BCr%C3%BCm&color=2ea44f)](https://github.com/coban9066/neva-mobile/releases/latest)
+*Telefoncu için geliştirildi. Telefoncularla geliştiriliyor.*
+
+[![Latest Release](https://img.shields.io/github/v/release/coban9066/neva-mobile?label=s%C3%BCr%C3%BCm&color=2ea44f)](https://github.com/coban9066/neva-mobile/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D6)](https://github.com/coban9066/neva-mobile/releases/latest)
-[![İndir](https://img.shields.io/badge/%E2%AC%87%20%C4%B0ndir-Son%20S%C3%BCr%C3%BCm-blue)](https://github.com/coban9066/neva-mobile/releases/latest)
 
 ---
 
 ## Özellikler
 
-| | |
-|---|---|
-| 📥 **Telefon Alış Yönetimi** | IMEI tabanlı hızlı alış kaydı |
-| 📤 **Telefon Satış Yönetimi** | Stoktan saniyeler içinde satış |
-| 🏦 **Kasa Yönetimi** | Nakit, POS ve havale takibi |
-| 🛡️ **Garanti Takibi** | Üretici garantisi ve süre uyarıları |
-| 💰 **Kâr Hesaplama** | Alış-satış turu bazlı gerçek kâr |
-| 🔄 **Otomatik Güncelleme** | Yeni sürümler otomatik yüklenir |
-| 🔑 **Lisans Sistemi** | Cihaza özel offline lisans |
-| 🗄️ **SQLite Veritabanı** | Verileriniz kendi bilgisayarınızda |
-| 📴 **Tamamen Offline** | İnternet bağlantısı gerektirmez |
+- **Telefon Alış Yönetimi**
+- **Telefon Satış Yönetimi**
+- **IMEI Takibi**
+- **Garanti Takibi**
+- **Kasa Yönetimi**
+- **Kâr Hesaplama**
+- **Lisans Sistemi**
+- **Otomatik Güncelleme**
+- **SQLite Veritabanı**
+- **Tamamen Offline Çalışma**
 
 ---
 
 ## Kimler İçin?
 
-- Telefon alım satım işletmeleri
-- GSM mağazaları
-- İkinci el telefon satıcıları
-- Telefon ticareti yapan işletmeler
+Bu yazılım;
+
+- Telefon Alım Satım Mağazaları
+- GSM Bayileri
+- İkinci El Telefon Satıcıları
+- Telefon Ticareti Yapan İşletmeler
+
+için geliştirilmiştir.
 
 ---
 
-## Son Sürümü İndir
+## 📥 Nasıl İndiririm?
 
-En son sürümü indirmek için **[GitHub Releases](https://github.com/coban9066/neva-mobile/releases/latest)** sekmesini kullanın.
+**[Releases](https://github.com/coban9066/neva-mobile/releases/latest)** sayfasındaki dosyalar arasından **sadece** `NEVA MOBILE Setup.exe` dosyasını indiriniz.
 
-> ⬇️ **[NEVA MOBILE — Son Sürümü İndir](https://github.com/coban9066/neva-mobile/releases/latest)**
-
-Release sayfası uygulamanın **resmi indirme merkezidir**. Kurulum dosyasını (`Setup.exe`) indirip çift tıklamanız yeterlidir.
+> `latest.json`, `.sig` ve *Source code* dosyaları otomatik güncelleme sistemi tarafından kullanılır — kullanıcı bunları indirmemelidir.
 
 ---
 
-## Deneme Lisansı
+## 🚀 Deneme Sürümü
 
-Programı indirip kurduktan sonra **deneme lisansı** almak için Instagram üzerinden iletişime geçebilirsiniz.
+Programı indirip kurduktan sonra deneme lisansı almak için Instagram üzerinden iletişime geçebilirsiniz.
 
-📩 **Instagram:** [@prodbycoban](https://instagram.com/prodbycoban)
-
----
-
-## Geri Bildirim
-
-Önerileriniz ve hata bildirimleriniz Instagram üzerinden iletilebilir.
-
-Her geri bildirim NEVA MOBILE'ın gelişmesine katkı sağlar.
+**Instagram:** [@prodbycoban](https://instagram.com/prodbycoban)
 
 ---
 
-## Auto Update
+## 🔄 Otomatik Güncelleme
 
-NEVA MOBILE, GitHub Releases üzerinden **otomatik güncelleme** almaktadır.
+NEVA MOBILE yeni sürümleri otomatik olarak kontrol eder. Yeni sürüm bulunduğunda tek tıkla güncellenebilir.
 
-Yeni sürüm yayınlandığında uygulama bunu açılışta otomatik algılar; tek tıkla güncellenir ve verileriniz (telefonlar, satışlar, kasa, lisans, ayarlar) aynen korunur.
+- Veritabanı korunur.
+- Lisans korunur.
+- Ayarlar korunur.
 
-Kaynak kod bu repository içerisinde bulunmamaktadır; buradaki Release dosyaları uygulamanın dağıtımı ve güncellemeleri içindir.
+---
+
+## 💬 Geri Bildirim
+
+Hata bildirimi, öneriler ve yeni özellik talepleri Instagram üzerinden iletilebilir.
+
+**Instagram:** [@prodbycoban](https://instagram.com/prodbycoban)
+
+---
+
+## Önemli Not
+
+Bu repository bir kaynak kod deposu değildir. Release sayfasında görülen `latest.json`, `.sig` ve *Source code* dosyaları uygulamanın otomatik güncelleme sistemi içindir. Normal kullanıcı yalnızca `NEVA MOBILE Setup.exe` dosyasını indirmelidir.
 
 ---
 
 © NEVA MOBILE
+*Telefoncu için geliştirildi. Telefoncularla geliştiriliyor.*
