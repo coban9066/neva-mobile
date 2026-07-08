@@ -1,0 +1,18 @@
+# Gizli anahtarlar — asla git'e gönderilmez
+secrets/
+
+# Build çıktıları
+release/
+app/node_modules/
+app/dist/
+app/dist-ssr/
+app/src-tauri/target/
+app/src-tauri/gen/schemas/
+license-manager/target/
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.log

@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+/* ── PhoneDealer ERP design tokens — design-system/phonedealer-erp/MASTER.md ── */
+
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #e9eef6;
+  --fg: #0f172a;
+  --fg-muted: #64748b;
+  --border: #dbeafe;
+  --border-strong: #bfdbfe;
+  --primary: #1e40af;
+  --primary-hover: #1e3a8a;
+  --on-primary: #ffffff;
+  --secondary: #3b82f6;
+  --accent: #d97706;
+  --destructive: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  --ring: #1e40af;
+  --sidebar: #0f172a;
+  --sidebar-fg: #cbd5e1;
+  --sidebar-active: #1e40af;
+}
+
+.dark {
+  --bg: #0b1220;
+  --surface: #111a2e;
+  --surface-2: #1a2540;
+  --fg: #e2e8f0;
+  --fg-muted: #8ea0bd;
+  --border: #1e293b;
+  --border-strong: #334155;
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --on-primary: #0b1220;
+  --secondary: #60a5fa;
+  --accent: #f59e0b;
+  --destructive: #ef4444;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --ring: #3b82f6;
+  --sidebar: #0b1220;
+  --sidebar-fg: #8ea0bd;
+  --sidebar-active: #3b82f6;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-fg: var(--sidebar-fg);
+  --color-sidebar-active: var(--sidebar-active);
+
+  --font-sans: "Fira Sans", system-ui, sans-serif;
+  --font-mono: "Fira Code", ui-monospace, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    user-select: none;
+  }
+  input,
+  textarea {
+    user-select: text;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 25%, transparent);
+  }
+  /* Masaüstü hissi: ince scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Dashboard kartları: giriş (fade + scale) ve hover lift — transform tabanlı, layout kaydırmaz */
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  .animate-card-in {
+    animation: card-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .card-lift {
+    transition:
+      transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.2s ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--fg) 18%, transparent);
+  }
+}

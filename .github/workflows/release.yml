@@ -1,0 +1,47 @@
+name: Release
+
+# "v*" tag'i push edildiğinde NEVA MOBILE'ı Windows'ta derler, updater
+# imzalama anahtarıyla imzalar ve latest.json dahil tüm asset'leri
+# taslak (draft) bir GitHub Release'e yükler. Release'i son onaylayıp
+# yayınlamak (Publish) elle yapılır — müşteriye giden sürüm insan
+# onayından geçsin diye kasıtlı olarak otomatik yayınlanmaz.
+#
+# Gerekli repo secret'ları (Settings > Secrets and variables > Actions):
+#   TAURI_SIGNING_PRIVATE_KEY           → secrets/updater/updater_private.key içeriği
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  → secrets/updater/password.txt içeriği
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: app
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: app
+          tagName: ${{ github.ref_name }}
+          releaseName: "NEVA MOBILE ${{ github.ref_name }}"
+          releaseDraft: true
+          prerelease: false
