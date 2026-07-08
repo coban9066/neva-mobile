@@ -8,7 +8,7 @@ export type PhoneStatus =
 
 export type Ownership = "stock" | "consignment";
 export type PaymentMethod = "cash" | "pos" | "transfer" | "mixed";
-export type CosmeticGrade = "A" | "B" | "C" | "D";
+export type CosmeticGrade = "Sıfır" | "Sıfır Gibi" | "İyi" | "Normal" | "Temiz Kullanılmış";
 export type Region = "domestic" | "import";
 
 export const REGION_LABELS: Record<Region, string> = {
@@ -66,6 +66,7 @@ export interface PhoneRow {
   region: Region | null;
   total_cost: number | null;
   last_event_at: string | null;
+  notes: string | null;
 }
 
 export interface TimelineEvent {
@@ -93,3 +94,12 @@ export const TIMELINE_LABELS: Record<TimelineEvent["event_type"], string> = {
   return: "İade",
   reservation: "Rezervasyon",
 };
+
+/** Bir alış turuna ("current_acquisition_id") bağlı serbest metin masraf kaydı. */
+export interface Expense {
+  id: number;
+  acquisition_id: number;
+  category: string;
+  amount: number;
+  date: string;
+}

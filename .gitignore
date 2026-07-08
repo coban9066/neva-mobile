@@ -16,3 +16,4 @@ license-manager/target/
 .idea/
 .DS_Store
 *.log
+.claude/

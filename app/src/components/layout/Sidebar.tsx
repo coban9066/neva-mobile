@@ -46,15 +46,12 @@ export function Sidebar() {
             <p className="truncate text-[13px] font-semibold tracking-wide text-white">
               NEVA MOBILE
             </p>
-            <p className="truncate text-[10px] text-sidebar-fg">
-              Telefon Alım Satım Yönetim Sistemi
-            </p>
           </div>
         )}
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-2">
-        {NAV.map(({ to, label, icon: Icon, key }) => (
+        {NAV.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -71,9 +68,6 @@ export function Sidebar() {
           >
             <Icon size={16} strokeWidth={1.75} className="shrink-0" />
             {!collapsed && <span className="flex-1 truncate">{label}</span>}
-            {!collapsed && key && (
-              <span className="font-mono text-[10px] opacity-40">⌃{key}</span>
-            )}
           </NavLink>
         ))}
       </nav>

@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.1.0"
+version = "0.1.2"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -25,10 +25,11 @@ serde_json = "1"
 tauri-plugin-sql = { version = "2.4.0", features = ["sqlite"] }
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite"] }
 ed25519-dalek = "2"
-sha2 = "0.11.0"
+sha2 = "0.10"
 data-encoding = "2.11.0"
 winreg = "0.56.0"
 chrono = "0.4.45"
+hmac = "0.12"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 

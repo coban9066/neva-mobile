@@ -2,9 +2,10 @@
 //! Kod: NVM- + Base32(payload[12B] ‖ Ed25519 imza[64B])
 //! Payload: version(1) device_hash(6) plan(1) start_days(2,BE) end_days(2,BE)
 
-use chrono::{Duration, NaiveDate, Utc};
-use data_encoding::BASE32_NOPAD;
+use chrono::{Duration, NaiveDate, NaiveDateTime, Utc};
+use data_encoding::{BASE32_NOPAD, HEXLOWER};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+use hmac::{Hmac, Mac};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use sqlx::{Pool, Sqlite};
@@ -13,6 +14,74 @@ use sqlx::{Pool, Sqlite};
 const PUBLIC_KEY_HEX: &str = "1ed139b3e243e880de672ddb1883933a4292489f70f1c647914f7919c19e30fe";
 const EPOCH: &str = "2024-01-01";
 const PLAN_LABELS: &[&str] = &["Deneme", "1 Ay", "3 Ay", "6 Ay", "12 Ay", "Sınırsız"];
+
+/// AppData'daki "son çalıştırma" imza anahtarı — dosya kullanıcı tarafından düz
+/// metin olarak değiştirilemesin diye HMAC ile bütünlüğü korunur (gizlilik değil,
+/// kurcalamayı tespit etmek amaçlı; anahtar diğer offline imzalar gibi binary'ye gömülü).
+const TS_GUARD_SECRET: &[u8] = b"NEVA-MOBILE-TS-GUARD-v1-do-not-share";
+const DATE_FMT: &str = "%Y-%m-%dT%H:%M:%S";
+const SQLITE_DATETIME_FMT: &str = "%Y-%m-%d %H:%M:%S";
+
+fn ts_guard_dir() -> std::path::PathBuf {
+    let base = std::env::var("APPDATA").unwrap_or_else(|_| ".".into());
+    std::path::PathBuf::from(base).join("com.nevamobile.erp")
+}
+
+fn ts_guard_path() -> std::path::PathBuf {
+    ts_guard_dir().join(".neva_ts")
+}
+
+fn hmac_hex(ts: &str) -> Option<String> {
+    let mut mac = Hmac::<Sha256>::new_from_slice(TS_GUARD_SECRET).ok()?;
+    mac.update(ts.as_bytes());
+    Some(HEXLOWER.encode(&mac.finalize().into_bytes()))
+}
+
+/// "Son çalıştırma" anını AppData'ya HMAC imzalı olarak yazar (asla var olandan geriye gitmez).
+fn write_ts_guard(dt: &NaiveDateTime) {
+    let ts = dt.format(DATE_FMT).to_string();
+    let Some(sig) = hmac_hex(&ts) else { return };
+    let dir = ts_guard_dir();
+    if std::fs::create_dir_all(&dir).is_err() {
+        return;
+    }
+    let path = ts_guard_path();
+    if std::fs::write(&path, format!("{ts}|{sig}")).is_ok() {
+        // Windows Gezgini'nde göze çarpmasın diye gizli öznitelik denenir (best-effort).
+        let _ = std::process::Command::new("attrib")
+            .args(["+h", &path.to_string_lossy()])
+            .output();
+    }
+}
+
+/// Dosyayı okur; imza tutarsızsa (elle düzenlenmiş/değiştirilmiş) None döner — bu da şüpheli sayılır.
+fn read_ts_guard() -> Option<NaiveDateTime> {
+    let raw = std::fs::read_to_string(ts_guard_path()).ok()?;
+    let (ts, sig) = raw.split_once('|')?;
+    if hmac_hex(ts)?.eq_ignore_ascii_case(sig.trim()) {
+        NaiveDateTime::parse_from_str(ts, DATE_FMT).ok()
+    } else {
+        None
+    }
+}
+
+/// Gerçek iş kayıtlarındaki en ileri tarih — sistem saati bunun bile gerisine
+/// düşerse (aktif kullanılan bir kurulumda) saat manipülasyonu şüphesi kuvvetlenir.
+async fn business_activity_watermark(pool: &Pool<Sqlite>) -> Option<NaiveDateTime> {
+    let raw: Option<String> = sqlx::query_scalar::<_, Option<String>>(
+        "SELECT MAX(t) FROM (
+            SELECT MAX(created_at) AS t FROM phones
+            UNION ALL SELECT MAX(created_at) FROM acquisitions
+            UNION ALL SELECT MAX(created_at) FROM sales
+            UNION ALL SELECT MAX(date) FROM till_entries
+         )",
+    )
+    .fetch_one(pool)
+    .await
+    .ok()
+    .flatten();
+    raw.and_then(|s| NaiveDateTime::parse_from_str(&s, SQLITE_DATETIME_FMT).ok())
+}
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -263,24 +332,37 @@ pub async fn evaluate(pool: &Pool<Sqlite>) -> LicenseStatus {
     }
 
     let now = Utc::now().naive_local();
-    // Saat geri alma: gördüğümüz en ileri an, şimdiden 24 saatten fazla ilerideyse şüpheli.
-    if let Some(seen) = setting(pool, "license_last_seen").await {
-        if let Ok(seen) = chrono::NaiveDateTime::parse_from_str(&seen, "%Y-%m-%dT%H:%M:%S") {
-            if seen - now > Duration::hours(24) {
-                if cfg!(debug_assertions) {
-                    // Log rollback but do not block developer in debug mode
-                } else {
-                    return none("clock_rollback");
-                }
-            }
+
+    // Çoklu kaynak saat geri alma koruması: SQLite'taki son görülen an, AppData'daki
+    // HMAC imzalı işaretçi ve gerçek iş kayıtlarının en ileri tarihi birlikte kontrol
+    // edilir — tek bir kaynağı geri almak/silmek yetmez, tutarsızlık da şüpheli sayılır.
+    let sqlite_seen = setting(pool, "license_last_seen")
+        .await
+        .and_then(|s| NaiveDateTime::parse_from_str(&s, DATE_FMT).ok());
+    let appdata_marker_exists = ts_guard_path().exists();
+    let appdata_seen = read_ts_guard();
+    // Dosya var ama imzası doğrulanamıyorsa (elle düzenlenmiş/başka kurulumdan kopyalanmış).
+    let appdata_tampered = appdata_marker_exists && appdata_seen.is_none();
+
+    let most_advanced_seen = [sqlite_seen, appdata_seen].into_iter().flatten().max();
+    let business_seen = business_activity_watermark(pool).await;
+
+    let rollback_detected = appdata_tampered
+        || most_advanced_seen.is_some_and(|seen| seen - now > Duration::hours(24))
+        || business_seen.is_some_and(|seen| seen - now > Duration::hours(24));
+
+    if rollback_detected {
+        if cfg!(debug_assertions) {
+            // Log rollback but do not block developer in debug mode
+        } else {
+            return none("clock_rollback");
         }
     }
-    set_setting(
-        pool,
-        "license_last_seen",
-        &now.format("%Y-%m-%dT%H:%M:%S").to_string(),
-    )
-    .await;
+
+    // En ileri görülen an asla geriye gitmez; her iki kayıt da bu ana güncellenir.
+    let new_seen = most_advanced_seen.map_or(now, |s| s.max(now));
+    set_setting(pool, "license_last_seen", &new_seen.format(DATE_FMT).to_string()).await;
+    write_ts_guard(&new_seen);
 
     let start = epoch_date() + Duration::days(payload.start_days as i64);
     let unlimited = payload.end_days == 0xFFFF;

@@ -1,6 +1,6 @@
 import type { CosmeticGrade } from "@/types";
 
-/** Kozmetik kademeleri: DB'deki A/B/C/D değerleri korunur, UI'da yıldız + etiketle sunulur. */
+/** Kozmetik kademeleri — DB'deki metin aynen etiket olarak kullanılır, olumsuz ifade yok. */
 export interface GradeMeta {
   grade: CosmeticGrade;
   stars: number; // 5 üzerinden
@@ -9,10 +9,11 @@ export interface GradeMeta {
 }
 
 export const GRADES: GradeMeta[] = [
-  { grade: "A", stars: 5, label: "A", description: "Sıfır gibi" },
-  { grade: "B", stars: 4, label: "B", description: "Çok temiz" },
-  { grade: "C", stars: 3, label: "C", description: "Temiz" },
-  { grade: "D", stars: 2, label: "D", description: "Yıpranmış" },
+  { grade: "Sıfır", stars: 5, label: "Sıfır", description: "Kutulu / hiç açılmamış" },
+  { grade: "Sıfır Gibi", stars: 5, label: "Sıfır Gibi", description: "Neredeyse yeni" },
+  { grade: "İyi", stars: 4, label: "İyi", description: "Az kullanılmış" },
+  { grade: "Normal", stars: 3, label: "Normal", description: "Normal kullanım izleri" },
+  { grade: "Temiz Kullanılmış", stars: 2, label: "Temiz Kullanılmış", description: "Kullanılmış, bakımlı" },
 ];
 
 export const GRADE_META: Record<CosmeticGrade, GradeMeta> = Object.fromEntries(

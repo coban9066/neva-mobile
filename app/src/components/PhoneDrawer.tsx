@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { invoke } from "@tauri-apps/api/core";
 import {
   X,
   Copy,
@@ -10,16 +12,24 @@ import {
   Puzzle,
   Undo2,
   CalendarClock,
+  MessageCircle,
+  IdCard,
+  Trash2,
 } from "lucide-react";
 import { selectOne, select } from "@/lib/db";
-import { useUi } from "@/stores/ui";
+import { useUi, isReadOnly } from "@/stores/ui";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { formatKurus } from "@/lib/money";
 import { remainingDays, formatSpan } from "@/lib/warranty";
 import { StatusBadge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RegionBadge } from "@/components/ui/region-segment";
 import { PhoneQuality } from "@/components/PhoneQuality";
+import { ExpenseSection } from "@/components/ExpenseSection";
+import { WhatsAppShareDialog } from "@/components/WhatsAppShareDialog";
+import { ImeiCopyDialog } from "@/components/ImeiCopyDialog";
 import {
   PHONE_STATUS_LABELS,
   TIMELINE_LABELS,
@@ -46,6 +56,7 @@ interface PhoneDetail {
   notes: string | null;
   total_cost: number | null;
   purchase_price: number | null;
+  current_acquisition_id: number | null;
 }
 
 const EVENT_ICONS: Record<TimelineEvent["event_type"], typeof Receipt> = {
@@ -69,12 +80,22 @@ const EVENT_COLOR: Record<TimelineEvent["event_type"], string> = {
 };
 
 export function PhoneDrawer() {
-  const { phoneDrawerId, closePhoneDrawer, toast } = useUi();
+  const { phoneDrawerId, closePhoneDrawer, toast, license } = useUi();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const [tab, setTab] = useState<"summary" | "timeline">("summary");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [imeiOpen, setImeiOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const open = phoneDrawerId !== null;
+  const readOnly = isReadOnly(license);
 
   useEffect(() => {
     if (open) setTab("summary");
+    setShareOpen(false);
+    setImeiOpen(false);
+    setDeleteOpen(false);
   }, [open, phoneDrawerId]);
 
   useEffect(() => {
@@ -110,6 +131,30 @@ export function PhoneDrawer() {
         [phoneDrawerId]
       ),
   });
+
+  function goToSale() {
+    if (!phone) return;
+    closePhoneDrawer();
+    navigate("/satislar", { state: { mode: "checkout", phoneId: phone.id } });
+  }
+
+  async function handleDelete() {
+    if (!phone?.current_acquisition_id || deleting) return;
+    setDeleting(true);
+    try {
+      await invoke("delete_purchase", { acquisitionId: phone.current_acquisition_id });
+      toast({ kind: "success", title: "Telefon kaydı silindi." });
+      await qc.invalidateQueries({ queryKey: ["phones"] });
+      await qc.invalidateQueries({ queryKey: ["phone-counts"] });
+      await qc.invalidateQueries({ queryKey: ["sale-stock"] });
+      setDeleteOpen(false);
+      closePhoneDrawer();
+    } catch (e) {
+      toast({ kind: "error", title: `Silinemedi: ${String(e)}` });
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   if (!open) return null;
 
@@ -152,11 +197,19 @@ export function PhoneDrawer() {
                 </div>
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-md bg-surface-2 px-2 py-1.5">
                   <p className="text-[10px] uppercase text-fg-muted">Alış</p>
                   <p className="tabular text-[13px] font-semibold">
                     {formatKurus(phone.purchase_price)}
+                  </p>
+                </div>
+                <div className="rounded-md bg-surface-2 px-2 py-1.5">
+                  <p className="text-[10px] uppercase text-fg-muted">Masraf</p>
+                  <p className="tabular text-[13px] font-semibold">
+                    {phone.total_cost != null && phone.purchase_price != null
+                      ? formatKurus(phone.total_cost - phone.purchase_price)
+                      : "—"}
                   </p>
                 </div>
                 <div className="rounded-md bg-surface-2 px-2 py-1.5">
@@ -165,6 +218,29 @@ export function PhoneDrawer() {
                     {formatKurus(phone.total_cost)}
                   </p>
                 </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}>
+                  <MessageCircle size={13} /> WhatsApp
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setImeiOpen(true)}>
+                  <IdCard size={13} /> IMEI
+                </Button>
+                {phone.status !== "sold" && (
+                  <Button variant="primary" size="sm" disabled={readOnly} onClick={goToSale}>
+                    <ArrowUpFromLine size={13} /> Sat
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={readOnly}
+                  onClick={() => setDeleteOpen(true)}
+                  className="text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 size={13} /> Sil
+                </Button>
               </div>
 
               <nav className="mt-3 flex gap-1">
@@ -214,6 +290,12 @@ export function PhoneDrawer() {
                       </div>
                     ))}
                   </dl>
+                  {phone.current_acquisition_id && (
+                    <ExpenseSection
+                      acquisitionId={phone.current_acquisition_id}
+                      phoneId={phone.id}
+                    />
+                  )}
                 </div>
               )}
 
@@ -257,6 +339,35 @@ export function PhoneDrawer() {
           <div className="p-4 text-sm text-fg-muted">Yükleniyor…</div>
         )}
       </aside>
+
+      <WhatsAppShareDialog open={shareOpen} onClose={() => setShareOpen(false)} phone={phone ?? null} />
+      <ImeiCopyDialog
+        open={imeiOpen}
+        onClose={() => setImeiOpen(false)}
+        imei1={phone?.imei1 ?? ""}
+        imei2={phone?.imei2 ?? null}
+      />
+      <Dialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Telefonu Sil"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeleteOpen(false)} disabled={deleting}>
+              İptal
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Siliniyor…" : "Kalıcı Olarak Sil"}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-xs text-fg-muted leading-relaxed">
+          Bu telefonu ve bu alış turuna ait tüm masraf kayıtlarını kalıcı olarak silmek istediğinizden
+          emin misiniz? Bu telefona bağlı bir satış varsa önce o satışı silmeniz gerekir.
+        </p>
+        <p className="mt-3 text-xs text-destructive font-medium">Dikkat: Bu işlem geri alınamaz!</p>
+      </Dialog>
     </>
   );
 }

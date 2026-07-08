@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Smartphone, Search } from "lucide-react";
+import { Smartphone, Search, MessageCircle, IdCard } from "lucide-react";
 import { select } from "@/lib/db";
 import { useUi } from "@/stores/ui";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,8 @@ import { StatusBadge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RegionBadge } from "@/components/ui/region-segment";
+import { WhatsAppShareDialog } from "@/components/WhatsAppShareDialog";
+import { ImeiCopyDialog } from "@/components/ImeiCopyDialog";
 import { batteryStatus, QUALITY_TONE_CLASS } from "@/lib/quality";
 import { PHONE_STATUS_LABELS, type PhoneRow, type PhoneStatus } from "@/types";
 
@@ -24,6 +26,8 @@ export function PhonesPage() {
   const [tab, setTab] = useState<PhoneStatus | "all">("in_stock");
   const [search, setSearch] = useState("");
   const { openPhoneDrawer, openQuickPurchase } = useUi();
+  const [shareTarget, setShareTarget] = useState<PhoneRow | null>(null);
+  const [imeiTarget, setImeiTarget] = useState<PhoneRow | null>(null);
 
   const { data: counts = [] } = useQuery({
     queryKey: ["phone-counts"],
@@ -43,7 +47,7 @@ export function PhonesPage() {
       select<PhoneRow>(
         `SELECT p.id, p.imei1, p.imei2, b.name AS brand_name, p.model AS model_name,
                 p.color, p.storage_gb, p.cosmetic_grade, p.battery_health,
-                p.status, p.ownership, p.region,
+                p.status, p.ownership, p.region, p.notes,
                 (SELECT c.total_cost FROM v_phone_cost c WHERE c.acquisition_id = p.current_acquisition_id) AS total_cost,
                 (SELECT MAX(t.date) FROM v_phone_timeline t WHERE t.phone_id = p.id) AS last_event_at
          FROM phones p
@@ -124,6 +128,7 @@ export function PhonesPage() {
                 <th className="px-2 py-2 font-medium">Kozmetik</th>
                 <th className="px-2 py-2 font-medium">Pil</th>
                 <th className="px-4 py-2 text-right font-medium">Maliyet</th>
+                <th className="px-4 py-2 text-center font-medium w-20">İşlem</th>
               </tr>
             </thead>
             <tbody>
@@ -166,12 +171,48 @@ export function PhonesPage() {
                     )}
                   </td>
                   <td className="tabular px-4 py-2 text-right">{formatKurus(p.total_cost)}</td>
+                  <td className="px-4 py-2">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShareTarget(p);
+                        }}
+                        title="WhatsApp'ta Paylaş"
+                        className="cursor-pointer rounded p-1 text-fg-muted hover:bg-success/10 hover:text-success transition-colors"
+                      >
+                        <MessageCircle size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setImeiTarget(p);
+                        }}
+                        title="IMEI Kopyala"
+                        className="cursor-pointer rounded p-1 text-fg-muted hover:bg-primary/10 hover:text-primary transition-colors"
+                      >
+                        <IdCard size={14} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      <WhatsAppShareDialog
+        open={shareTarget !== null}
+        onClose={() => setShareTarget(null)}
+        phone={shareTarget}
+      />
+      <ImeiCopyDialog
+        open={imeiTarget !== null}
+        onClose={() => setImeiTarget(null)}
+        imei1={imeiTarget?.imei1 ?? ""}
+        imei2={imeiTarget?.imei2 ?? null}
+      />
     </div>
   );
 }

@@ -31,7 +31,7 @@ export function GradePicker({
   compact?: boolean;
 }) {
   return (
-    <div className={cn("grid grid-cols-4", compact ? "gap-1.5" : "gap-2")}>
+    <div className={cn("grid grid-cols-5", compact ? "gap-1" : "gap-1.5")}>
       {GRADES.map(({ grade, stars, label, description }) => {
         const active = value === grade;
         return (
@@ -44,7 +44,7 @@ export function GradePicker({
             className={cn(
               "flex cursor-pointer flex-col items-center rounded-lg border bg-surface text-center",
               "transition-[border-color,box-shadow,background-color] duration-200",
-              compact ? "gap-0.5 px-1.5 py-1.5" : "gap-1 px-2 py-2.5",
+              compact ? "gap-0.5 px-1 py-1.5" : "gap-1 px-1.5 py-2.5",
               active
                 ? "border-primary bg-primary/[0.04] shadow-[0_0_0_1px_var(--primary),0_0_16px_-4px_var(--primary)]"
                 : "border-border-strong hover:border-primary/50 hover:shadow-[0_0_12px_-6px_var(--primary)]",
@@ -55,14 +55,16 @@ export function GradePicker({
             <Stars count={stars} active={active} />
             <span
               className={cn(
-                "font-semibold leading-none",
-                compact ? "text-xs" : "text-sm",
+                "font-semibold leading-tight",
+                compact ? "text-[10px]" : "text-[11px]",
                 active ? "text-primary" : "text-fg"
               )}
             >
               {label}
             </span>
-            {!compact && <span className="text-[10px] leading-tight text-fg-muted">{description}</span>}
+            {!compact && (
+              <span className="text-[9px] leading-tight text-fg-muted">{description}</span>
+            )}
           </button>
         );
       })}

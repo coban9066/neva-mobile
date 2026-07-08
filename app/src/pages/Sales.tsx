@@ -42,8 +42,28 @@ export function SalesPage() {
   const [viewMode, setViewMode] = useState<"list" | "checkout">("list");
 
   useEffect(() => {
-    if (location.state && (location.state as any).mode === "checkout") {
+    const state = location.state as { mode?: string; phoneId?: number } | null;
+    if (state?.mode === "checkout") {
       setViewMode("checkout");
+      if (state.phoneId != null) {
+        select<StockPhone>(
+          `SELECT p.id,
+                  COALESCE(b.name || ' ' || p.model, 'Telefon #' || p.id) AS label,
+                  p.imei1, p.storage_gb, p.color, p.cosmetic_grade, p.region,
+                  a.price AS purchase_price, c.total_cost, p.warranty_until
+           FROM phones p
+           JOIN acquisitions a ON a.id = p.current_acquisition_id
+           JOIN v_phone_cost c ON c.acquisition_id = p.current_acquisition_id
+           LEFT JOIN brands b ON b.id = p.brand_id
+           WHERE p.id = $1`,
+          [state.phoneId]
+        ).then((rows) => {
+          if (rows[0]) {
+            setSelectedPhone(rows[0]);
+            setPriceRaw(String(rows[0].total_cost / 100));
+          }
+        });
+      }
     }
   }, [location]);
 

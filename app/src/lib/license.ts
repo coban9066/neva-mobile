@@ -34,7 +34,7 @@ export const LICENSE_STATE_LABELS: Record<LicenseState, string> = {
   none: "Lisans yok",
   invalid: "Geçersiz kod",
   device_mismatch: "Kod bu cihaza ait değil",
-  clock_rollback: "Sistem saati tutarsız",
+  clock_rollback: "Sistem saati geriye alınmış görünüyor. Lütfen tarih ve saatinizi kontrol edin.",
   expired: "Süresi doldu",
   valid: "Aktif",
 };

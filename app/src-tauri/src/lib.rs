@@ -74,8 +74,11 @@ async fn save_purchase(
     let pool = sqlite_pool(&instances).await?;
     license::ensure_writable(&pool).await?;
 
-    if !matches!(args.cosmetic_grade.as_str(), "A" | "B" | "C" | "D") {
-        return Err("Kozmetik kademesi zorunludur (A/B/C/D).".into());
+    if !matches!(
+        args.cosmetic_grade.as_str(),
+        "Sıfır" | "Sıfır Gibi" | "İyi" | "Normal" | "Temiz Kullanılmış"
+    ) {
+        return Err("Kozmetik kademesi zorunludur.".into());
     }
     if let Some(bh) = args.battery_health {
         if !(1..=100).contains(&bh) {
@@ -602,6 +605,18 @@ pub fn run() {
             version: 8,
             description: "add_model_text",
             sql: include_str!("../migrations/008_add_model_text.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 9,
+            description: "expense_freeform_category",
+            sql: include_str!("../migrations/009_expense_freeform_category.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 10,
+            description: "cosmetic_grade_relabel",
+            sql: include_str!("../migrations/010_cosmetic_grade_relabel.sql"),
             kind: MigrationKind::Up,
         },
     ];

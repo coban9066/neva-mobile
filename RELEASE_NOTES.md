@@ -1,8 +1,16 @@
-İlk resmi sürüm.
+# NEVA MOBILE v0.1.2
 
-- Telefon alış ve satış yönetimi
-- IMEI tabanlı stok takibi
-- Kâr hesaplama ve kasa yönetimi
-- Garanti takibi
-- Offline lisans sistemi
-- Otomatik güncelleme altyapısı
+Bu sürüm kullanıcı geri bildirimleri doğrultusunda geliştirildi.
+
+## Yenilikler
+
+- Auto Update sistemi geliştirildi
+- Veritabanını koruyan güncelleme altyapısı
+- Telefona özel masraf sistemi
+- WhatsApp paylaşımı
+- Serbest model girişi
+- Veri Yönetimi geliştirmeleri
+- Arayüz iyileştirmeleri
+- Performans ve kararlılık geliştirmeleri
+
+Teşekkürler.
