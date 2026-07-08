@@ -18,11 +18,30 @@ const UPDATER_ENDPOINT = tauriConf.plugins?.updater?.endpoints?.[0] ?? "";
 const GITHUB_REPO_MATCH = UPDATER_ENDPOINT.match(/github\.com\/([^/]+)\/([^/]+)\//);
 const GITHUB_REPO = GITHUB_REPO_MATCH ? `${GITHUB_REPO_MATCH[1]}/${GITHUB_REPO_MATCH[2]}` : null;
 
+// GitHub asset adlarında boşluk dota çevrilir; updater URL'i öngörülebilir kalsın diye
+// yüklenen dosyalar boşluksuz adlandırılır.
+const SAFE_NAME = PRODUCT_NAME.replace(/\s+/g, "_");
+
 console.log("=== NEVA MOBILE RELEASE PIPELINE ===");
 
 function runCmd(cmd, cwd, env) {
   console.log(`Running: ${cmd} in ${cwd}`);
   execSync(cmd, { cwd, stdio: "inherit", env: env ? { ...process.env, ...env } : process.env });
+}
+
+// gh CLI: PATH'te yoksa standart kurulum yolunu dene (winget MSI mevcut oturumun PATH'ine yansımaz).
+function ghExe() {
+  const candidates = [
+    "gh",
+    path.join(process.env["ProgramFiles"] || "C:\\Program Files", "GitHub CLI", "gh.exe"),
+  ];
+  for (const c of candidates) {
+    try {
+      execSync(`"${c}" --version`, { stdio: "pipe" });
+      return c;
+    } catch {}
+  }
+  return null;
 }
 
 try {
@@ -117,17 +136,31 @@ Bu klasör lisans kodları üretmek için gerekli araçları içerir:
 `;
   fs.writeFileSync(path.resolve(gelistiriciDir, "README.txt"), readmeGelistiriciContent, "utf8");
 
-  // 9. GitHub Release paketi: latest.json + imzalı updater artifact (auto-update kaynağı).
-  console.log("\nPreparing GitHub Release assets (auto-update)...");
-  const githubDir = path.resolve(releaseDir, "GITHUB");
-  fs.mkdirSync(githubDir, { recursive: true });
+  // 9. Auto-update asset'leri MUSTERI klasörüne üretilir (GitHub Release'e yalnız buradan yüklenir).
+  //    createUpdaterArtifacts formatına göre imza ya doğrudan setup.exe'nin (.sig) ya da
+  //    v1-uyumlu .nsis.zip'in yanındadır; ikisi de desteklenir.
+  console.log("\nPreparing auto-update assets (MUSTERI)...");
+  const uploadSetupName = `${SAFE_NAME}_${APP_VERSION}_x64-setup.exe`;
+  const exeSigSrc = `${setupSrc}.sig`;
+  const nsisZipSrc = path.resolve(nsisDir, `${setupName}.nsis.zip`);
+  const nsisZipSigSrc = `${nsisZipSrc}.sig`;
 
-  const nsisZipName = `${setupName}.nsis.zip`;
-  const nsisZipSrc = path.resolve(nsisDir, nsisZipName);
-  const nsisSigSrc = `${nsisZipSrc}.sig`;
-  fs.copyFileSync(setupSrc, path.resolve(githubDir, setupName));
-  fs.copyFileSync(nsisZipSrc, path.resolve(githubDir, nsisZipName));
-  fs.copyFileSync(nsisSigSrc, path.resolve(githubDir, `${nsisZipName}.sig`));
+  let updaterAssetName;
+  if (fs.existsSync(exeSigSrc)) {
+    updaterAssetName = uploadSetupName;
+    fs.copyFileSync(setupSrc, path.resolve(musteriDir, uploadSetupName));
+    fs.copyFileSync(exeSigSrc, path.resolve(musteriDir, `${uploadSetupName}.sig`));
+  } else if (fs.existsSync(nsisZipSigSrc)) {
+    updaterAssetName = `${uploadSetupName}.nsis.zip`;
+    fs.copyFileSync(setupSrc, path.resolve(musteriDir, uploadSetupName));
+    fs.copyFileSync(nsisZipSrc, path.resolve(musteriDir, updaterAssetName));
+    fs.copyFileSync(nsisZipSigSrc, path.resolve(musteriDir, `${updaterAssetName}.sig`));
+  } else {
+    throw new Error(
+      "İmzalı updater artifact'i bulunamadı (.sig yok). " +
+      "TAURI_SIGNING_PRIVATE_KEY(_PATH) ile build alındığından emin olun."
+    );
+  }
 
   const notesPath = path.resolve(rootDir, "RELEASE_NOTES.md");
   const notes = fs.existsSync(notesPath)
@@ -135,9 +168,10 @@ Bu klasör lisans kodları üretmek için gerekli araçları içerir:
     : `NEVA MOBILE ${APP_VERSION} yayınlandı.`;
 
   const tag = `v${APP_VERSION}`;
-  const downloadBase = GITHUB_REPO
-    ? `https://github.com/${GITHUB_REPO}/releases/download/${tag}`
-    : "https://github.com/<OWNER>/<REPO>/releases/download/" + tag;
+  if (!GITHUB_REPO) {
+    throw new Error("tauri.conf.json updater endpoint'i bir GitHub reposuna işaret etmiyor.");
+  }
+  const downloadBase = `https://github.com/${GITHUB_REPO}/releases/download/${tag}`;
 
   const latestJson = {
     version: APP_VERSION,
@@ -145,46 +179,62 @@ Bu klasör lisans kodları üretmek için gerekli araçları içerir:
     pub_date: new Date().toISOString(),
     platforms: {
       "windows-x86_64": {
-        signature: fs.readFileSync(path.resolve(githubDir, `${nsisZipName}.sig`), "utf8").trim(),
-        url: `${downloadBase}/${encodeURIComponent(nsisZipName)}`,
+        signature: fs
+          .readFileSync(path.resolve(musteriDir, `${updaterAssetName}.sig`), "utf8")
+          .trim(),
+        url: `${downloadBase}/${updaterAssetName}`,
       },
     },
   };
   fs.writeFileSync(
-    path.resolve(githubDir, "latest.json"),
+    path.resolve(musteriDir, "latest.json"),
     JSON.stringify(latestJson, null, 2),
     "utf8"
   );
 
-  if (!GITHUB_REPO) {
-    console.warn(
-      "\nWARNING: tauri.conf.json içindeki updater endpoint'i bir GitHub repo'suna işaret etmiyor. " +
-      "latest.json içindeki indirme URL'leri <OWNER>/<REPO> placeholder'ı ile üretildi; " +
-      "gerçek repo belli olunca hem tauri.conf.json hem bu build'i güncelleyin."
-    );
+  // 10. GitHub Release yayını: YALNIZCA release/MUSTERI içindeki dosyalar asset olarak
+  //     yüklenir. Kaynak kod, GELISTIRICI klasörü ve anahtarlar asla gönderilmez.
+  if (process.env.SKIP_PUBLISH === "1") {
+    console.log("\nSKIP_PUBLISH=1 — GitHub Release yayını atlandı.");
+  } else {
+    console.log(`\nPublishing GitHub Release ${tag} to ${GITHUB_REPO}...`);
+    const gh = ghExe();
+    if (!gh) {
+      throw new Error(
+        "GitHub CLI (gh) bulunamadı. Kurulum: winget install GitHub.cli, sonra: gh auth login"
+      );
+    }
+    const assets = [
+      path.resolve(musteriDir, updaterAssetName),
+      path.resolve(musteriDir, `${updaterAssetName}.sig`),
+      path.resolve(musteriDir, "latest.json"),
+    ];
+    for (const a of assets) {
+      if (!fs.existsSync(a)) throw new Error(`Yüklenecek asset eksik: ${a}`);
+    }
+    const notesFile = path.resolve(releaseDir, "_notes.md");
+    fs.writeFileSync(notesFile, notes, "utf8");
+    const assetArgs = assets.map((a) => `"${a}"`).join(" ");
+
+    let releaseExists = false;
+    try {
+      execSync(`"${gh}" release view ${tag} --repo ${GITHUB_REPO}`, { stdio: "pipe" });
+      releaseExists = true;
+    } catch {}
+
+    if (releaseExists) {
+      console.log(`Release ${tag} zaten var; asset'ler güncelleniyor (--clobber)...`);
+      runCmd(`"${gh}" release upload ${tag} ${assetArgs} --clobber --repo ${GITHUB_REPO}`, appDir);
+    } else {
+      runCmd(
+        `"${gh}" release create ${tag} ${assetArgs} --repo ${GITHUB_REPO} ` +
+          `--title "NEVA MOBILE ${tag}" --notes-file "${notesFile}" --latest`,
+        appDir
+      );
+    }
+    fs.rmSync(notesFile, { force: true });
+    console.log(`\nRelease URL: https://github.com/${GITHUB_REPO}/releases/tag/${tag}`);
   }
-
-  const readmeGithubContent =
-`=== NEVA MOBILE ${APP_VERSION} — GitHub Release Paketi (Auto-Update) ===
-
-Bu klasördeki dosyalar, GitHub'da "${tag}" tag'iyle bir Release oluşturup
-aynı isimlerle asset olarak yüklenmelidir:
-
-- ${setupName}            (tam kurulum dosyası — yeni müşteriler için)
-- ${nsisZipName}           (updater'ın indirdiği imzalı paket)
-- ${nsisZipName}.sig       (imza dosyası — yalnızca referans, latest.json içine gömülü)
-- latest.json              (uygulamanın güncelleme kontrolünde okuduğu manifest)
-
-Adımlar:
-1. GitHub reposunda "${tag}" tag'i ile yeni bir Release oluşturun.
-2. Yukarıdaki 4 dosyayı Release asset'i olarak yükleyin (latest.json dahil).
-3. Release'i yayınlayın (Publish release).
-
-Uygulama, tauri.conf.json → plugins.updater.endpoints altındaki
-"/releases/latest/download/latest.json" adresinden bu dosyayı okur;
-GitHub bu adresi otomatik olarak en son yayınlanan Release'e yönlendirir.
-`;
-  fs.writeFileSync(path.resolve(githubDir, "README.txt"), readmeGithubContent, "utf8");
 
   console.log("\n=== RELEASE SUCCESSFUL ===");
   console.log(`Outputs available at: ${releaseDir}`);
