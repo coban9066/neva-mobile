@@ -269,20 +269,6 @@ Evet — lisans transferi desteklenir.
 
 <br>
 
-## 🧭 Yakında Gelecek Özellikler
-
-- ☐ Fotoğraf Sistemi
-- ☐ QR Kod
-- ☐ Etiket Yazdırma
-- ☐ Cloud Backup
-- ☐ Çoklu Şube
-
-<br>
-
----
-
-<br>
-
 ## 💬 Geri Bildirim
 
 Hata bildirimi, öneriler ve yeni özellik talepleri:
