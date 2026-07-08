@@ -63,7 +63,8 @@ try {
   console.log("\nBuilding NEVA MOBILE client application...");
   runCmd("npm run build", appDir);
   runCmd("npx tauri build", appDir, {
-    TAURI_SIGNING_PRIVATE_KEY_PATH: updaterKeyPath,
+    // CLI, _PATH varyantını her sürümde tanımıyor; anahtar içeriği doğrudan verilir.
+    TAURI_SIGNING_PRIVATE_KEY: fs.readFileSync(updaterKeyPath, "utf8").trim(),
     TAURI_SIGNING_PRIVATE_KEY_PASSWORD: fs.readFileSync(updaterPasswordPath, "utf8").trim(),
   });
 
