@@ -5,6 +5,7 @@ import { ArrowUpFromLine, Search, Plus, Trash2 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { select } from "@/lib/db";
 import { formatKurus, parseLiraInput } from "@/lib/money";
+import { normalizePhone } from "@/lib/phone-format";
 import { formatDateTime, cn } from "@/lib/utils";
 import { useUi, isReadOnly } from "@/stores/ui";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -184,7 +185,7 @@ export function SalesPage() {
           paymentMethod: toDbPayment(payment),
           paymentLabel: SALE_PAYMENT_LABELS[payment],
           customerName: customerName.trim() || null,
-          customerPhone: customerPhone.trim() || null,
+          customerPhone: customerPhone.trim() ? normalizePhone(customerPhone) : null,
           notes: notes.trim() || null,
         },
       });

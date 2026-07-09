@@ -27,6 +27,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RegionBadge } from "@/components/ui/region-segment";
 import { PhoneQuality } from "@/components/PhoneQuality";
+import { PeopleTab } from "@/components/PeopleTab";
 import { ExpenseSection } from "@/components/ExpenseSection";
 import { WhatsAppShareDialog } from "@/components/WhatsAppShareDialog";
 import { ImeiCopyDialog } from "@/components/ImeiCopyDialog";
@@ -83,7 +84,7 @@ export function PhoneDrawer() {
   const { phoneDrawerId, closePhoneDrawer, toast, license } = useUi();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"summary" | "timeline">("summary");
+  const [tab, setTab] = useState<"summary" | "people" | "timeline">("summary");
   const [shareOpen, setShareOpen] = useState(false);
   const [imeiOpen, setImeiOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -247,6 +248,7 @@ export function PhoneDrawer() {
                 {(
                   [
                     ["summary", "Özet"],
+                    ["people", "Kişiler"],
                     ["timeline", "Zaman Çizelgesi"],
                   ] as const
                 ).map(([key, label]) => (
@@ -297,6 +299,10 @@ export function PhoneDrawer() {
                     />
                   )}
                 </div>
+              )}
+
+              {tab === "people" && (
+                <PeopleTab phoneId={phone.id} acquisitionId={phone.current_acquisition_id} />
               )}
 
               {tab === "timeline" &&

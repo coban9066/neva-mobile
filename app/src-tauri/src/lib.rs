@@ -58,6 +58,8 @@ pub struct PurchaseArgs {
     checks: Vec<PurchaseCheck>,
     contact_id: Option<i64>,
     contact_name: Option<String>,
+    /// Kimden alındı — telefon numarası (opsiyonel, normalize: 05321234567)
+    contact_phone: Option<String>,
     price: i64,
     payment_method: String,
     payment_label: String,
@@ -162,11 +164,25 @@ async fn save_purchase(
         .last_insert_rowid(),
     };
 
-    let contact_id = match (args.contact_id, args.contact_name.as_deref()) {
+    let contact_name = args
+        .contact_name
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let contact_phone = args
+        .contact_phone
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    // contacts kaydı yalnızca cari/ledger bağı için (yeni kişi girildiyse). Kişiler
+    // sekmesinin gösterdiği ad/telefonun asıl kaynağı alış satırının kendi sütunlarıdır.
+    let contact_id = match (args.contact_id, contact_name) {
         (Some(id), _) => Some(id),
-        (None, Some(name)) if name.trim().len() >= 2 => Some(
-            sqlx::query("INSERT INTO contacts (type, full_name) VALUES ('supplier', ?1)")
-                .bind(name.trim())
+        (None, Some(name)) if name.len() >= 2 => Some(
+            sqlx::query("INSERT INTO contacts (type, full_name, phone_number) VALUES ('supplier', ?1, ?2)")
+                .bind(name)
+                .bind(contact_phone)
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?
@@ -176,11 +192,13 @@ async fn save_purchase(
     };
 
     let acq_id = sqlx::query(
-        "INSERT INTO acquisitions (phone_id, contact_id, price, payment_method, source)
-         VALUES (?1,?2,?3,?4,'walk_in')",
+        "INSERT INTO acquisitions (phone_id, contact_id, contact_name, contact_phone, price, payment_method, source)
+         VALUES (?1,?2,?3,?4,?5,?6,'walk_in')",
     )
     .bind(phone_id)
     .bind(contact_id)
+    .bind(contact_name)
+    .bind(contact_phone)
     .bind(args.price)
     .bind(&args.payment_method)
     .execute(&mut *tx)
@@ -296,11 +314,22 @@ async fn save_sale(instances: State<'_, DbInstances>, args: SaleArgs) -> Result<
     }
     let acq_id = acq_id.ok_or("Telefonun alış kaydı yok.")?;
 
-    let contact_id = match args.customer_name.as_deref() {
-        Some(name) if name.trim().len() >= 2 => Some(
+    let customer_name = args
+        .customer_name
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let customer_phone = args
+        .customer_phone
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    let contact_id = match customer_name {
+        Some(name) if name.len() >= 2 => Some(
             sqlx::query("INSERT INTO contacts (type, full_name, phone_number) VALUES ('customer', ?1, ?2)")
-                .bind(name.trim())
-                .bind(&args.customer_phone)
+                .bind(name)
+                .bind(customer_phone)
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?
@@ -310,12 +339,14 @@ async fn save_sale(instances: State<'_, DbInstances>, args: SaleArgs) -> Result<
     };
 
     let sale_id = sqlx::query(
-        "INSERT INTO sales (phone_id, acquisition_id, contact_id, price, payment_method, notes)
-         VALUES (?1,?2,?3,?4,?5,?6)",
+        "INSERT INTO sales (phone_id, acquisition_id, contact_id, contact_name, contact_phone, price, payment_method, notes)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8)",
     )
     .bind(args.phone_id)
     .bind(acq_id)
     .bind(contact_id)
+    .bind(customer_name)
+    .bind(customer_phone)
     .bind(args.price)
     .bind(&args.payment_method)
     .bind(&args.notes)
@@ -678,6 +709,143 @@ async fn backup_database(
     }
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PhoneQualityArgs {
+    phone_id: i64,
+    cosmetic_grade: String,
+    battery_health: Option<i64>,
+    region: String,
+    #[serde(default)]
+    checks: Vec<String>,
+}
+
+/// Telefon kalitesi güncelleme (kozmetik + pil + menşei + kontroller).
+///
+/// Bu, eskiden frontend'deki `transaction()` yardımcısıyla yapılıyordu; ancak
+/// tauri-plugin-sql bir BAĞLANTI HAVUZU kullandığından `BEGIN`/`COMMIT`/`ROLLBACK`
+/// her biri farklı bağlantıya düşebiliyor ve hata anında ROLLBACK aktif transaction
+/// bulamayıp "cannot rollback - no transaction is active" veriyor, gerçek SQL
+/// hatasını da maskeliyordu. Çözüm: atomik yazma tek bağlantılı gerçek bir sqlx
+/// transaction'ında burada yapılır (save_purchase/save_sale ile aynı desen).
+#[tauri::command]
+async fn update_phone_quality(
+    instances: State<'_, DbInstances>,
+    args: PhoneQualityArgs,
+) -> Result<(), String> {
+    let pool = sqlite_pool(&instances).await?;
+    license::ensure_writable(&pool).await?;
+
+    if !matches!(
+        args.cosmetic_grade.as_str(),
+        "Sıfır" | "Sıfır Gibi" | "İyi" | "Normal" | "Temiz Kullanılmış"
+    ) {
+        return Err("Kozmetik kademesi zorunludur.".into());
+    }
+    if let Some(bh) = args.battery_health {
+        if !(1..=100).contains(&bh) {
+            return Err("Pil sağlığı 1-100 arasında olmalıdır.".into());
+        }
+    }
+    if !matches!(args.region.as_str(), "domestic" | "import") {
+        return Err("Menşei seçimi zorunludur (yurt içi / yurt dışı).".into());
+    }
+    if args
+        .checks
+        .iter()
+        .any(|k| k.is_empty() || k.len() > 40 || !k.bytes().all(|b| b.is_ascii_lowercase() || b == b'_'))
+    {
+        return Err("Geçersiz kontrol anahtarı.".into());
+    }
+
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+    sqlx::query(
+        "UPDATE phones SET cosmetic_grade=?2, battery_health=?3, region=?4,
+         updated_at=datetime('now','localtime') WHERE id=?1",
+    )
+    .bind(args.phone_id)
+    .bind(&args.cosmetic_grade)
+    .bind(args.battery_health)
+    .bind(&args.region)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    sqlx::query("DELETE FROM phone_checks WHERE phone_id=?1")
+        .bind(args.phone_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    for key in &args.checks {
+        sqlx::query("INSERT INTO phone_checks (phone_id, check_key, value) VALUES (?1,?2,1)")
+            .bind(args.phone_id)
+            .bind(key)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    tx.commit().await.map_err(|e| e.to_string())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContactInfoArgs {
+    /// "acquisition" | "sale"
+    kind: String,
+    id: i64,
+    name: Option<String>,
+    phone: Option<String>,
+}
+
+/// Kişiler sekmesinden ad/telefon düzenleme. Bilgi doğrudan ilgili alış veya
+/// satış satırında güncellenir (ayrı CRM tablosu yoktur). İlişkili contacts
+/// kaydı varsa cari/arama tutarlılığı için o da güncellenir.
+#[tauri::command]
+async fn update_contact_info(
+    instances: State<'_, DbInstances>,
+    args: ContactInfoArgs,
+) -> Result<(), String> {
+    let pool = sqlite_pool(&instances).await?;
+    license::ensure_writable(&pool).await?;
+
+    let table = match args.kind.as_str() {
+        "acquisition" => "acquisitions",
+        "sale" => "sales",
+        _ => return Err("Geçersiz kayıt türü.".into()),
+    };
+    let name = args.name.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let phone = args.phone.as_deref().map(str::trim).filter(|s| !s.is_empty());
+
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+    sqlx::query(&format!(
+        "UPDATE {table} SET contact_name=?2, contact_phone=?3 WHERE id=?1"
+    ))
+    .bind(args.id)
+    .bind(name)
+    .bind(phone)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    // Bağlı contacts kaydını da güncelle (varsa) — cari/arama ekranlarıyla tutarlılık.
+    sqlx::query(&format!(
+        "UPDATE contacts SET full_name=COALESCE(?2, full_name), phone_number=?3, updated_at=datetime('now','localtime')
+         WHERE id=(SELECT contact_id FROM {table} WHERE id=?1)"
+    ))
+    .bind(args.id)
+    .bind(name)
+    .bind(phone)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    tx.commit().await.map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Bekleyen geri yükleme, DB'ye ilk bağlantıdan ÖNCE uygulanmalı.
@@ -744,6 +912,12 @@ pub fn run() {
             sql: include_str!("../migrations/010_cosmetic_grade_relabel.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 11,
+            description: "contact_phone",
+            sql: include_str!("../migrations/011_contact_phone.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -765,7 +939,9 @@ pub fn run() {
             get_license_status,
             activate_license,
             backup_database,
-            restore_database
+            restore_database,
+            update_phone_quality,
+            update_contact_info
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

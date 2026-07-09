@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { invoke } from "@tauri-apps/api/core";
 import { BatteryMedium, Pencil, ShieldQuestion, Sparkles, X, Check } from "lucide-react";
-import { select, execute, transaction } from "@/lib/db";
+import { select } from "@/lib/db";
 import { GRADE_META, batteryStatus, QUALITY_TONE_CLASS } from "@/lib/quality";
 import { getProfile } from "@/profiles";
 import { useUi, isReadOnly } from "@/stores/ui";
@@ -70,21 +71,16 @@ export function PhoneQuality({ phone }: { phone: QualityPhone }) {
     if (!grade || !batteryValid || saving) return;
     setSaving(true);
     try {
-      await transaction(async () => {
-        await execute(
-          `UPDATE phones SET cosmetic_grade = $1, battery_health = $2, region = $3,
-             updated_at = datetime('now','localtime') WHERE id = $4`,
-          [grade, battery, region, phone.id]
-        );
-        await execute("DELETE FROM phone_checks WHERE phone_id = $1", [phone.id]);
-        for (const c of profile.checks) {
-          if (checks[c.key]) {
-            await execute("INSERT INTO phone_checks (phone_id, check_key, value) VALUES ($1,$2,1)", [
-              phone.id,
-              c.key,
-            ]);
-          }
-        }
+      // Atomik yazma Rust tarafında (update_phone_quality) — tek bağlantılı gerçek
+      // sqlx transaction. Frontend'deki eski havuz-güvensiz transaction kaldırıldı.
+      await invoke("update_phone_quality", {
+        args: {
+          phoneId: phone.id,
+          cosmeticGrade: grade,
+          batteryHealth: battery,
+          region,
+          checks: profile.checks.filter((c) => checks[c.key]).map((c) => c.key),
+        },
       });
       qc.invalidateQueries();
       setEditing(false);

@@ -16,6 +16,7 @@ import { parseWarrantyInput, warrantyEndDate } from "@/lib/warranty";
 import { getProfile } from "@/profiles";
 import { useUi } from "@/stores/ui";
 import { cn, formatDate } from "@/lib/utils";
+import { normalizePhone } from "@/lib/phone-format";
 import type { Brand, Contact, CosmeticGrade, PaymentMethod, Region } from "@/types";
 import { PAYMENT_LABELS, PHONE_STATUS_LABELS, type PhoneStatus } from "@/types";
 
@@ -58,6 +59,7 @@ export function QuickPurchase() {
   const [warrantyRaw, setWarrantyRaw] = useState("");
   const [contactQuery, setContactQuery] = useState("");
   const [contactId, setContactId] = useState<number | null>(null);
+  const [contactPhone, setContactPhone] = useState("");
   const [priceRaw, setPriceRaw] = useState("");
   const [payment, setPayment] = useState<PaymentMethod>("cash");
   const [saving, setSaving] = useState(false);
@@ -80,6 +82,7 @@ export function QuickPurchase() {
       setWarrantyRaw("");
       setContactQuery("");
       setContactId(null);
+      setContactPhone("");
       setPriceRaw("");
       setPayment("cash");
       setTimeout(() => imeiRef.current?.focus(), 50);
@@ -208,7 +211,9 @@ export function QuickPurchase() {
           warrantyUntil: warrantySpan ? warrantyEndDate(warrantySpan) : null,
           checks: profile.checks.map((c) => ({ key: c.key, value: !!checks[c.key] })),
           contactId,
-          contactName: contactId === null ? contactQuery.trim() || null : null,
+          // Ad her zaman kayda yazılır (kişiler sekmesi bunu gösterir); numara opsiyonel.
+          contactName: contactQuery.trim() || null,
+          contactPhone: contactPhone.trim() ? normalizePhone(contactPhone) : null,
           price,
           paymentMethod: payment,
           paymentLabel: PAYMENT_LABELS[payment],
@@ -531,6 +536,7 @@ export function QuickPurchase() {
                     onClick={() => {
                       setContactId(c.id);
                       setContactQuery(c.full_name);
+                      if (c.phone_number) setContactPhone(c.phone_number);
                     }}
                     className="flex w-full cursor-pointer items-center justify-between px-2.5 py-1.5 text-left text-xs hover:bg-surface-2"
                   >
@@ -541,6 +547,16 @@ export function QuickPurchase() {
               </div>
             )}
           </div>
+        </Field>
+
+        <Field label="Telefon Numarası" hint="Opsiyonel — boş bırakılabilir">
+          <Input
+            value={contactPhone}
+            onChange={(e) => setContactPhone(e.target.value.replace(/[^\d\s+]/g, ""))}
+            placeholder="0532 123 45 67"
+            inputMode="tel"
+            className="font-mono"
+          />
         </Field>
 
         <Field label="Alış fiyatı (₺)">
