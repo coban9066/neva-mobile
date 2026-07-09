@@ -1,0 +1,3 @@
+-- v0.1.5 — Hotfix migration placeholder.
+-- Tüm kritik şema değişiklikleri ve kişi takip özellikleri v0.1.4 ile uygulandı.
+-- Bu migration, versiyon uyumluluğu ve hotfix doğrulaması için eklenmiştir.

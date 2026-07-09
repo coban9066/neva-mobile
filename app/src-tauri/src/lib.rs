@@ -846,10 +846,45 @@ async fn update_contact_info(
     tx.commit().await.map_err(|e| e.to_string())
 }
 
+fn fix_migration_checksums() {
+    let dir = app_data_dir();
+    let db_path = dir.join("neva.db");
+    if !db_path.exists() {
+        return;
+    }
+
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build();
+
+    if let Ok(runtime) = rt {
+        runtime.block_on(async {
+            use sqlx::Connection;
+            let db_url = format!("sqlite:{}", db_path.to_string_lossy());
+            if let Ok(mut conn) = sqlx::SqliteConnection::connect(&db_url).await {
+                // Migration 11 LF checksum:
+                // 9a197b03a88c73ce2ae48823adcc8920e638a6a8d9a5ce48e7be80fa5425378abf27bbae86a60d6435f0d9bd8b34286d
+                let lf_checksum: Vec<u8> = vec![
+                    0x9a, 0x19, 0x7b, 0x03, 0xa8, 0x8c, 0x73, 0xce, 0x2a, 0xe4, 0x88, 0x23, 0xad, 0xcc, 0x89, 0x20,
+                    0xe6, 0x38, 0xa6, 0xa8, 0xd9, 0xa5, 0xce, 0x48, 0xe7, 0xbe, 0x80, 0xfa, 0x54, 0x25, 0x37, 0x8a,
+                    0xbf, 0x27, 0xbb, 0xae, 0x86, 0xa6, 0x0d, 0x64, 0x35, 0xf0, 0xd9, 0xbd, 0x8b, 0x34, 0x28, 0x6d
+                ];
+                let _ = sqlx::query("UPDATE _sqlx_migrations SET checksum = ? WHERE version = 11")
+                    .bind(lf_checksum)
+                    .execute(&mut conn)
+                    .await;
+            }
+        });
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Bekleyen geri yükleme, DB'ye ilk bağlantıdan ÖNCE uygulanmalı.
     apply_pending_restore();
+
+    // Checksum uyumsuzluklarını düzelt.
+    fix_migration_checksums();
 
     let migrations = vec![
         Migration {
@@ -918,7 +953,30 @@ pub fn run() {
             sql: include_str!("../migrations/011_contact_phone.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 12,
+            description: "hotfix",
+            sql: include_str!("../migrations/012_hotfix.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
+
+    let migrations: Vec<Migration> = migrations
+        .into_iter()
+        .map(|m| {
+            let sql = if m.sql.contains("\r\n") {
+                Box::leak(m.sql.replace("\r\n", "\n").into_boxed_str()) as &'static str
+            } else {
+                m.sql
+            };
+            Migration {
+                version: m.version,
+                description: m.description,
+                sql,
+                kind: m.kind,
+            }
+        })
+        .collect();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
