@@ -8,7 +8,7 @@
 <br>
 
 [![Latest Release](https://img.shields.io/github/v/release/coban9066/neva-mobile?label=s%C3%BCr%C3%BCm&color=2ea44f&style=for-the-badge)](https://github.com/coban9066/neva-mobile/releases/latest)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/coban9066/neva-mobile/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Windows%207%20%2F%2010%20%2F%2011-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/coban9066/neva-mobile/releases/latest)
 [![Offline](https://img.shields.io/badge/%C3%A7al%C4%B1%C5%9Fma-tamamen%20offline-16a34a?style=for-the-badge)](#)
 
 <br>
@@ -22,6 +22,10 @@
 <br>
 
 ### ⬇️ [**NEVA MOBILE Setup.exe — Son Sürümü İndir**](https://github.com/coban9066/neva-mobile/releases/latest)
+<sub>Windows 10 / 11 için</sub>
+
+### 🕰️ [**Windows 7 Legacy Edition — İndir**](https://github.com/coban9066/neva-mobile/releases/tag/legacy-win7)
+<sub>Windows 7 SP1 x64 kullanan bilgisayarlar için özel sürüm</sub>
 
 </div>
 
@@ -70,8 +74,10 @@ Excel'de ayrı bir sayfa alış için, ayrı bir sayfa satış için. Defterde d
 **⚙️ Altyapı**
 - 🔄 Otomatik Güncelleme
 - SQLite Veritabanı
+- 💾 Tek Dosya Yedek & Geri Yükleme
 - Tamamen Offline
 - Cihaza Özel Lisans
+- 🕰️ Windows 7 Legacy Desteği
 
 </td>
 </tr>
@@ -100,7 +106,13 @@ Satılan telefonların garanti süresini, başlangıç ve bitiş tarihlerini kol
 Toplam alış, satış, kâr ve gider bilgilerinizi tek ekranda görün.
 
 **📂 Veri Yönetimi**
-Veritabanınızı güvenle yedekleyin, ihtiyaç halinde tek tıkla geri yükleyin.
+Tüm veritabanınız (telefonlar, satışlar, masraflar, cariler, ayarlar) tek bir `.nevabackup` dosyası olarak istediğiniz konuma yedeklenir. Geri yüklemede dosya önce doğrulanır — bozuk dosyalar reddedilir, verileriniz risk altına girmez.
+
+**🔑 Güven Veren Lisans Deneyimi**
+Deneme süresi dolduğunda verileriniz asla silinmez. "Verileriniz Güvende" ekranı kayıtlarınızın özetini canlı gösterir; lisansınızı girdiğiniz an kaldığınız yerden devam edersiniz. Lisanssızken bile yedek alabilirsiniz.
+
+**🕰️ Windows 7 Legacy Edition**
+Dükkânında hâlâ Windows 7 kullanan esnaf unutulmadı: Windows 7 SP1 x64 için özel derlenen ayrı paket, WebView2 Runtime 109 ile birlikte gelir ve kendi bağımsız güncelleme kanalını kullanır. Aynı veritabanı yapısı sayesinde Windows 10'a geçişte verileriniz tek dosyayla taşınır.
 
 **🔄 Otomatik Güncelleme**
 Yeni sürüm çıktığında uygulama otomatik algılar, tekrar kurulum yapmadan tek tıkla güncellersiniz. Verileriniz korunur.
@@ -149,6 +161,20 @@ Gerçek ekranlar, gerçek akış — NEVA MOBILE'ın günlük kullanımda nasıl
 </tr>
 <tr>
 <td align="center" width="33%">
+<a href="readme-img/dashboard.png"><img src="readme-img/dashboard.png" width="100%" /></a>
+<br><sub><b>Dashboard</b></sub>
+</td>
+<td align="center" width="33%">
+<a href="readme-img/veri-yonetimi.png"><img src="readme-img/veri-yonetimi.png" width="100%" /></a>
+<br><sub><b>Veri Yönetimi — Yedekleme</b></sub>
+</td>
+<td align="center" width="33%">
+<a href="readme-img/lisans-ekrani.png"><img src="readme-img/lisans-ekrani.png" width="100%" /></a>
+<br><sub><b>Lisans Ekranı — Verileriniz Güvende</b></sub>
+</td>
+</tr>
+<tr>
+<td align="center" width="33%">
 <a href="readme-img/telefon-garanti.png"><img src="readme-img/telefon-garanti.png" width="100%" /></a>
 <br><sub><b>Garanti</b></sub>
 </td>
@@ -184,6 +210,26 @@ Gerçek ekranlar, gerçek akış — NEVA MOBILE'ın günlük kullanımda nasıl
 | Offline Çalışma | ✓ | ✓ |
 | Lisans / Cihaz Güvenliği | ✗ | ✓ |
 | Telefoncuya Özel Tasarım | ✗ | ✓ |
+
+<br>
+
+---
+
+<br>
+
+## 🖥️ Desteklenen İşletim Sistemleri ve Kurulum
+
+| | Standart Sürüm | Windows 7 Legacy Edition |
+|---|:---:|:---:|
+| **İşletim Sistemi** | Windows 10 (1803+) / Windows 11 | Windows 7 SP1 x64 |
+| **İndirilecek Dosya** | `NEVA MOBILE Setup.exe` | `NEVA MOBILE Win7 Setup.exe` |
+| **WebView2** | Otomatik (sistemde hazır) | Runtime 109 pakette gelir |
+| **Otomatik Güncelleme** | ✓ (standart kanal) | ✓ (ayrı legacy kanalı) |
+| **Veritabanı & Lisans** | Aynı | Aynı — Win10'a geçişte tek dosyayla taşınır |
+
+**Kurulum:** İndirdiğiniz Setup dosyasını çift tıklayın → kurulum bitince uygulamayı açın → ilk açılışta görünen **Cihaz Kimliği**'ni satıcınıza gönderin → size verilen lisans kodunu yapıştırın. Hepsi bu.
+
+> **Windows 7 notu:** Legacy paketi kurmadan önce Windows 7 SP1 ve güncel Windows Update'lerin (özellikle SHA-2 desteği) kurulu olduğundan emin olun. `WebView2Runtime109-x64.exe` dosyası Setup ile aynı klasörde olmalıdır — WebView2 kurulu değilse kurulum bunu otomatik çalıştırır.
 
 <br>
 
@@ -276,7 +322,19 @@ Sizin bilgisayarınızda, kendi veritabanınızda. Başka kimse göremiyor, hiç
 <details>
 <summary><b>Yedek nasıl alınır?</b></summary>
 <br>
-Ayarlar > Veri Yönetimi ekranından tek tıkla yedek alabilirsiniz.
+Veri Yönetimi ekranındaki <b>Yedek Al</b> butonuyla tüm veritabanınız tek bir <code>.nevabackup</code> dosyası olarak istediğiniz konuma kaydedilir. <b>Yedekten Geri Yükle</b> ile de aynı dosyadan verilerinizi geri getirirsiniz — dosya önce doğrulanır, bozuksa reddedilir.
+</details>
+
+<details>
+<summary><b>Deneme sürem bitince verilerim silinir mi?</b></summary>
+<br>
+Hayır, kesinlikle silinmez. Deneme süresi dolduğunda karşınıza verilerinizin özetini gösteren bir bilgi ekranı çıkar; lisansınızı girdiğiniz an kaldığınız yerden devam edersiniz. Bu ekrandayken bile yedek alabilirsiniz.
+</details>
+
+<details>
+<summary><b>Windows 7 kullanıyorum, çalışır mı?</b></summary>
+<br>
+Evet — Windows 7 SP1 x64 için özel hazırlanan <b>Legacy Edition</b> paketini indirin. WebView2 Runtime 109 pakette birlikte gelir. Veritabanı yapısı standart sürümle aynıdır; ileride Windows 10'a geçerseniz verileriniz tek yedek dosyasıyla taşınır.
 </details>
 
 <details>
