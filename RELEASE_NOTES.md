@@ -1,35 +1,30 @@
-# NEVA MOBILE v0.1.3
+# NEVA MOBILE v0.1.4
 
-Bu sürüm, müşterilere dağıtılan ilk Production Release'dir.
+Bu sürüm, alış-satışta kişi takibini kolaylaştıran yeni özellikler ve önemli bir
+kararlılık düzeltmesi içerir.
 
-## Yenilikler
+## Yeni Özellikler
 
-### 🔑 Yeni Lisans Deneyimi (LICENSE REQUIRED)
-- Deneme süresi dolduğunda uygulama artık kapanmıyor; profesyonel bir tam ekran
-  bilgilendirme açılıyor.
-- **Verileriniz Güvende** paneli: telefon, satış, masraf ve müşteri kayıtlarınızın
-  sayısı ve son işlem zamanı canlı olarak gösterilir — hiçbir veri silinmez.
-- Tek tıkla WhatsApp üzerinden lisans satın alma iletişimi.
-- Lisans kodu girildiği anda uygulama kaldığınız yerden, yeniden kurulum
-  gerekmeden açılır.
+- **Alış kayıtlarına telefon numarası:** "Kimden Alındı" alanına opsiyonel telefon
+  numarası eklenebilir.
+- **Satış kayıtlarına telefon numarası:** "Kime Satıldı" alanına opsiyonel telefon
+  numarası eklenebilir.
+- **Yeni "Kişiler" sekmesi:** Telefon detayında, o telefonu kimden aldığınız ve
+  (satıldıysa) kime sattığınız bilgisi ad + telefon + tarih olarak birlikte görünür.
+- **Kişi bilgilerini düzenleme:** Kişiler sekmesinden ad ve telefon numarası
+  güncellenebilir, tek tıkla kaydedilir.
+- **Tek tık WhatsApp:** Telefon numarasının yanındaki WhatsApp butonuyla ilgili
+  kişiyle sohbet doğrudan açılır (numara otomatik biçimlenir).
 
-### 💾 Yedekleme ve Geri Yükleme
-- **Yedek Al:** Tüm veritabanı (telefonlar, satışlar, masraflar, cariler, ayarlar)
-  tek bir `.nevabackup` dosyası olarak istediğiniz konuma kaydedilir.
-- **Yedekten Geri Yükle:** Seçilen yedek önce doğrulanır (bütünlük + içerik
-  kontrolü), sonra uygulama güvenli şekilde yeniden başlatılarak devreye alınır.
-- Bozuk veya alakasız dosyalar geri yükleme öncesi reddedilir.
-- Yedekleme, lisans süresi dolmuş olsa bile her zaman kullanılabilir.
+## Düzeltmeler
 
-### 🖥️ Windows 7 Legacy Edition (ayrı paket)
-- Windows 7 SP1 x64 için özel derlenmiş ayrı kurulum paketi.
-- WebView2 Runtime 109 (Windows 7'yi destekleyen son sürüm) ile birlikte gelir;
-  kurulum gerekirse otomatik yükler.
-- Kendi bağımsız güncelleme kanalını kullanır; Windows 10/11 sürümüyle karışmaz.
-
-## İyileştirmeler
-- Salt okunur mod kaldırıldı; süresi dolan lisans artık net bir akışa yönlendiriyor.
-- Küçük arayüz ve kararlılık iyileştirmeleri.
+- **"cannot rollback - no transaction is active" hatası giderildi.** Telefon
+  düzenleme sırasında bazı kullanıcılarda görülen bu hata tamamen ortadan kaldırıldı.
+- **SQLite transaction sistemi yeniden düzenlendi.** Çok adımlı yazma işlemleri artık
+  tek bağlantılı gerçek transaction'larda güvenle çalışıyor; hata anında gerçek sebep
+  gizlenmiyor.
+- **Veritabanı migration iyileştirildi.** Yeni alanlar eski kayıtları bozmadan eklenir;
+  mevcut kişi bilgileri otomatik taşınır.
 
 ## Sistem Gereksinimleri
 - **Standart sürüm:** Windows 10 (1803+) / Windows 11, x64

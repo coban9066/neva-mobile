@@ -26,19 +26,11 @@ export async function execute(
   return db.execute(sql, params);
 }
 
-/**
- * Atomik çok adımlı yazma. plugin-sql bağlantı havuzu kullandığı için
- * BEGIN/COMMIT'i tek execute çağrılarıyla koşturuyoruz; hata halinde ROLLBACK.
- */
-export async function transaction<T>(fn: () => Promise<T>): Promise<T> {
-  const db = await getDb();
-  await db.execute("BEGIN IMMEDIATE");
-  try {
-    const result = await fn();
-    await db.execute("COMMIT");
-    return result;
-  } catch (e) {
-    await db.execute("ROLLBACK");
-    throw e;
-  }
-}
+// NOT: Buradan kaldırılan `transaction()` yardımcısı GÜVENLİ DEĞİLDİ.
+// tauri-plugin-sql bir bağlantı HAVUZU kullanıyor; ayrı `db.execute()` çağrıları
+// (BEGIN / iş / COMMIT / ROLLBACK) farklı bağlantılara düşebiliyordu. Bu yüzden
+// hata anında ROLLBACK aktif transaction bulamayıp "cannot rollback - no
+// transaction is active" veriyor ve gerçek SQL hatasını maskeliyordu.
+// Atomik çok adımlı yazmalar artık Rust komutlarında (tek bağlantılı gerçek
+// sqlx transaction) yapılıyor: save_purchase, save_sale, update_phone_quality,
+// update_contact_info. Frontend'den çok adımlı ham transaction AÇMAYIN.
