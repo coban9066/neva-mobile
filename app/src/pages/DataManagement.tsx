@@ -1,8 +1,17 @@
 import { useState } from "react";
-import { Database, AlertTriangle, ShieldAlert } from "lucide-react";
+import {
+  Database,
+  AlertTriangle,
+  ShieldAlert,
+  HardDriveDownload,
+  HardDriveUpload,
+} from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
+import { relaunch } from "@tauri-apps/plugin-process";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUi, isReadOnly } from "@/stores/ui";
+import { exportBackup } from "@/lib/backup";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 
@@ -22,6 +31,46 @@ export function DataManagementPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [purgeTarget, setPurgeTarget] = useState<PurgeKind | null>(null);
   const [purgeDaysVal, setPurgeDaysVal] = useState<number | null>(null);
+
+  // Geri yükleme onayı: seçilen .nevabackup dosyası
+  const [restorePath, setRestorePath] = useState<string | null>(null);
+
+  const handleBackup = async () => {
+    setLoading(true);
+    try {
+      const path = await exportBackup();
+      if (path) toast({ kind: "success", title: `Yedek oluşturuldu: ${path}` });
+    } catch (err) {
+      toast({ kind: "error", title: `Yedekleme başarısız: ${String(err)}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePickRestore = async () => {
+    const picked = await open({
+      title: "Yedekten Geri Yükle",
+      multiple: false,
+      filters: [{ name: "NEVA MOBILE Yedek", extensions: ["nevabackup"] }],
+    });
+    if (typeof picked === "string") setRestorePath(picked);
+  };
+
+  const handleRestore = async () => {
+    if (!restorePath) return;
+    setLoading(true);
+    try {
+      await invoke("restore_database", { sourcePath: restorePath });
+      toast({ kind: "success", title: "Yedek doğrulandı — uygulama yeniden başlatılıyor…" });
+      // Dosya değişimi bir sonraki açılışta, DB bağlantısı kapalıyken yapılır.
+      setTimeout(() => relaunch(), 800);
+    } catch (err) {
+      toast({ kind: "error", title: String(err) });
+      setLoading(false);
+    } finally {
+      setRestorePath(null);
+    }
+  };
 
   const handleOpenConfirm = (kind: PurgeKind) => {
     if (isReadOnly(license)) {
@@ -95,6 +144,26 @@ export function DataManagementPage() {
             </span>
           </div>
         )}
+
+        {/* Backup / Restore Section */}
+        <section className="rounded-lg border border-border bg-surface p-4 space-y-4">
+          <div>
+            <h2 className="text-xs font-semibold uppercase text-fg-muted">Yedekleme</h2>
+            <p className="mt-1 text-xs text-fg-muted">
+              Tüm veritabanı (telefonlar, satışlar, masraflar, cariler, ayarlar) tek bir{" "}
+              <code className="font-mono">.nevabackup</code> dosyası olarak dışarı aktarılır.
+              Geri yükleme, seçilen yedeği doğruladıktan sonra uygulamayı yeniden başlatır.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button variant="primary" onClick={handleBackup} disabled={loading} className="h-8 text-xs px-4">
+              <HardDriveDownload size={14} /> Yedek Al
+            </Button>
+            <Button variant="outline" onClick={handlePickRestore} disabled={loading} className="h-8 text-xs px-4">
+              <HardDriveUpload size={14} /> Yedekten Geri Yükle
+            </Button>
+          </div>
+        </section>
 
         {/* Sales Purging Section */}
         <section className="rounded-lg border border-border bg-surface p-4 space-y-4">
@@ -183,6 +252,36 @@ export function DataManagementPage() {
           </div>
         </div>
       </div>
+
+      {/* RESTORE CONFIRMATION DIALOG */}
+      <Dialog
+        open={restorePath !== null}
+        onClose={() => setRestorePath(null)}
+        title="Yedekten Geri Yükleme Onayı"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setRestorePath(null)}>
+              İptal
+            </Button>
+            <Button variant="destructive" onClick={handleRestore} className="min-w-[100px]">
+              Geri Yükle ve Yeniden Başlat
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-xs text-fg leading-relaxed">
+            Seçilen yedek: <code className="font-mono text-[11px]">{restorePath}</code>
+          </p>
+          <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-xs space-y-1 text-destructive">
+            <p className="font-semibold">UYARI:</p>
+            <p>
+              Mevcut veritabanının yerini bu yedek alacaktır. Yedek alındıktan SONRA girilen tüm
+              kayıtlar kaybolur. Devam etmeden önce güncel verinin de yedeğini almanız önerilir.
+            </p>
+          </div>
+        </div>
+      </Dialog>
 
       {/* CONFIRMATION DIALOG */}
       <Dialog

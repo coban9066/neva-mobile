@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ShieldAlert } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { StatusBar } from "@/components/layout/StatusBar";
@@ -11,6 +10,7 @@ import { QuickPurchase } from "@/components/QuickPurchase";
 import { PhoneDrawer } from "@/components/PhoneDrawer";
 import { Splash } from "@/components/Splash";
 import { ActivationScreen } from "@/components/Activation";
+import { LicenseRequiredScreen } from "@/components/LicenseRequired";
 import { UpdateDialog } from "@/components/UpdateDialog";
 import { useGlobalHotkeys } from "@/hooks/useGlobalHotkeys";
 import { fetchLicenseStatus } from "@/lib/license";
@@ -31,20 +31,6 @@ const queryClient = new QueryClient({
   },
 });
 
-function ReadOnlyBanner() {
-  const license = useUi((s) => s.license);
-  if (license?.state !== "expired") return null;
-  return (
-    <div className="flex items-center gap-2 border-b border-warning/40 bg-warning/10 px-4 py-1.5 text-xs">
-      <ShieldAlert size={13} className="shrink-0 text-warning" />
-      <span>
-        <b>Lisans süresi doldu — salt okunur mod.</b> Verileriniz güvende; yeni işlem için
-        Device ID'nizi gönderip lisansı yenileyin.
-      </span>
-    </div>
-  );
-}
-
 function Workspace() {
   useGlobalHotkeys();
   return (
@@ -52,7 +38,6 @@ function Workspace() {
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
-        <ReadOnlyBanner />
         <main className="min-h-0 flex-1">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
@@ -74,7 +59,13 @@ function Workspace() {
   );
 }
 
-/** Lisans kapısı: durum yüklenene kadar splash; geçerli/expired dışı → aktivasyon. */
+/**
+ * Lisans kapısı: durum yüklenene kadar splash.
+ * - none/invalid/device_mismatch/clock_rollback → Aktivasyon ekranı
+ * - expired (deneme/lisans süresi doldu) → LICENSE REQUIRED tam ekran deneyimi;
+ *   veri silinmez, lisans girilir girilmez state=valid olur ve ana uygulama açılır.
+ * - valid → ana uygulama
+ */
 function LicenseGate() {
   const { license, setLicense, toast } = useUi();
 
@@ -86,10 +77,12 @@ function LicenseGate() {
 
   const blocked =
     license && ["none", "invalid", "device_mismatch", "clock_rollback"].includes(license.state);
+  const expired = license?.state === "expired";
 
   return (
     <>
-      {license && (blocked ? <ActivationScreen /> : <Workspace />)}
+      {license &&
+        (blocked ? <ActivationScreen /> : expired ? <LicenseRequiredScreen /> : <Workspace />)}
       <Toaster />
       <Splash />
     </>

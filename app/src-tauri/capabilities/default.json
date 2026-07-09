@@ -11,6 +11,9 @@
     "sql:allow-select",
     "sql:allow-execute",
     "updater:default",
-    "process:allow-restart"
+    "process:allow-restart",
+    "process:allow-exit",
+    "dialog:allow-save",
+    "dialog:allow-open"
   ]
 }
