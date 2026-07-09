@@ -556,8 +556,133 @@ async fn purge_records(
     Ok(deleted)
 }
 
+/// Uygulama veri klasörü (%APPDATA%\com.nevamobile.erp) — plugin-sql ve lisans
+/// koruması da aynı konumu kullanır.
+fn app_data_dir() -> std::path::PathBuf {
+    let base = std::env::var("APPDATA").unwrap_or_else(|_| ".".into());
+    std::path::PathBuf::from(base).join("com.nevamobile.erp")
+}
+
+/// Açılışta bekleyen geri yükleme varsa uygular. DB bağlantısı henüz açılmadığı
+/// için dosya değişimi güvenlidir. Eski WAL/SHM dosyaları da temizlenir; aksi
+/// halde eski günlük yeni veritabanını bozar.
+fn apply_pending_restore() {
+    let dir = app_data_dir();
+    let pending = dir.join("neva.db.restore-pending");
+    if !pending.exists() {
+        return;
+    }
+    let db = dir.join("neva.db");
+    let _ = std::fs::remove_file(dir.join("neva.db-wal"));
+    let _ = std::fs::remove_file(dir.join("neva.db-shm"));
+    // Mevcut veritabanının son bir kopyası tutulur (yanlış yedek yüklendiyse kurtarma şansı).
+    if db.exists() {
+        let _ = std::fs::copy(&db, dir.join("neva.db.pre-restore"));
+    }
+    if std::fs::rename(&pending, &db).is_err() {
+        if std::fs::copy(&pending, &db).is_ok() {
+            let _ = std::fs::remove_file(&pending);
+        }
+    }
+}
+
+/// Seçilen .nevabackup dosyasını doğrular ve bir sonraki açılışta devreye girmek
+/// üzere sıraya koyar. Bozuk/alakasız dosyalar burada reddedilir — mevcut
+/// veritabanına restart öncesi dokunulmaz.
+#[tauri::command]
+async fn restore_database(source_path: String) -> Result<(), String> {
+    let src = std::path::PathBuf::from(&source_path);
+    let meta = std::fs::metadata(&src).map_err(|_| "Yedek dosyası okunamadı.")?;
+    if meta.len() < 1024 {
+        return Err("Bu dosya geçerli bir NEVA yedeği değil (boş veya eksik).".into());
+    }
+    // SQLite dosya imzası kontrolü
+    let mut header = [0u8; 16];
+    {
+        use std::io::Read;
+        let mut f = std::fs::File::open(&src).map_err(|e| format!("Dosya açılamadı: {e}"))?;
+        f.read_exact(&mut header).map_err(|_| "Dosya okunamadı.")?;
+    }
+    if &header != b"SQLite format 3\0" {
+        return Err("Bu dosya geçerli bir NEVA yedeği değil (SQLite formatında değil).".into());
+    }
+
+    // İçerik doğrulaması: bütünlük + beklenen tablolar (salt okunur bağlantı).
+    let opts = sqlx::sqlite::SqliteConnectOptions::new()
+        .filename(&src)
+        .read_only(true);
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(opts)
+        .await
+        .map_err(|_| "Yedek dosyası açılamadı — bozuk olabilir.")?;
+    let integrity: String = sqlx::query_scalar("PRAGMA integrity_check")
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| "Yedek bütünlük kontrolünden geçemedi.")?;
+    if integrity != "ok" {
+        pool.close().await;
+        return Err("Yedek dosyası hasarlı (bütünlük kontrolü başarısız).".into());
+    }
+    let expected: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('settings','phones','sales')",
+    )
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| "Yedek içeriği okunamadı.")?;
+    pool.close().await;
+    if expected < 3 {
+        return Err("Bu dosya bir NEVA MOBILE yedeği değil (beklenen tablolar yok).".into());
+    }
+
+    let dir = app_data_dir();
+    std::fs::create_dir_all(&dir).map_err(|e| format!("Veri klasörü oluşturulamadı: {e}"))?;
+    std::fs::copy(&src, dir.join("neva.db.restore-pending"))
+        .map_err(|e| format!("Yedek kopyalanamadı: {e}"))?;
+    Ok(())
+}
+
+/// Veritabanını kullanıcının seçtiği konuma tek dosya (.nevabackup) olarak dışarı
+/// aktarır. Bilinçli olarak lisans kontrolü YOKTUR: deneme süresi dolan kullanıcı
+/// da verisini her zaman yedekleyebilmelidir (veri rehin tutulmaz).
+/// VACUUM INTO atomiktir; açık bağlantı havuzuyla güvenle çalışır ve WAL'daki
+/// commit edilmiş veriyi de içerir.
+#[tauri::command]
+async fn backup_database(
+    instances: State<'_, DbInstances>,
+    target_path: String,
+) -> Result<(), String> {
+    let pool = sqlite_pool(&instances).await?;
+
+    let path = std::path::PathBuf::from(&target_path);
+    if path.file_name().is_none() || path.parent().is_none() {
+        return Err("Geçersiz yedek dosyası konumu.".into());
+    }
+    // VACUUM INTO hedef dosya varsa hata verir; kullanıcı kayıt diyaloğunda
+    // üzerine yazmayı zaten onayladığı için mevcut dosya kaldırılır.
+    if path.exists() {
+        std::fs::remove_file(&path)
+            .map_err(|e| format!("Mevcut dosyanın üzerine yazılamadı: {e}"))?;
+    }
+
+    sqlx::query("VACUUM INTO ?1")
+        .bind(path.to_string_lossy().to_string())
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Yedek oluşturulamadı: {e}"))?;
+
+    // Yedek gerçekten oluştu mu ve boş değil mi?
+    match std::fs::metadata(&path) {
+        Ok(m) if m.len() > 0 => Ok(()),
+        _ => Err("Yedek dosyası doğrulanamadı.".into()),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Bekleyen geri yükleme, DB'ye ilk bağlantıdan ÖNCE uygulanmalı.
+    apply_pending_restore();
+
     let migrations = vec![
         Migration {
             version: 1,
@@ -624,6 +749,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_sql::Builder::default()
@@ -637,7 +763,9 @@ pub fn run() {
             delete_purchase,
             purge_records,
             get_license_status,
-            activate_license
+            activate_license,
+            backup_database,
+            restore_database
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

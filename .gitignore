@@ -19,3 +19,6 @@ license-manager/target/
 .DS_Store
 *.log
 .claude/
+
+# Windows 7 Legacy: indirilen WebView2/Edge 109 yukleyicisi (134 MB) git'e girmez
+tools/win7/*.exe
