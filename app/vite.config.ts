@@ -16,6 +16,12 @@ export default defineConfig(async () => ({
     },
   },
 
+  // Windows 7 Legacy: WebView2 Runtime 109 = Chromium 109.
+  // JS ciktisinin Chrome 109'da calisabilmesi icin build hedefi sabitlendi.
+  build: {
+    target: "chrome109",
+  },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors

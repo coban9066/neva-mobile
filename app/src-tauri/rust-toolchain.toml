@@ -1,0 +1,5 @@
+# Windows 7 Legacy Edition — SADECE windows7-legacy branch'inde bulunur.
+# Rust 1.78+ ile derlenen binary'ler Windows 7'de calismaz (minimum OS Win10'a cekildi).
+# 1.77.2, Windows 7'yi tam destekleyen son stable Rust surumudur.
+[toolchain]
+channel = "1.77.2"

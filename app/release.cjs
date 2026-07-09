@@ -5,7 +5,13 @@ const path = require("path");
 const rootDir = path.resolve(__dirname, "..");
 const appDir = path.resolve(__dirname);
 const lmDir = path.resolve(rootDir, "license-manager");
-const releaseDir = path.resolve(rootDir, "release");
+// Windows 7 Legacy Edition: cikti ana surumden ayri klasore alinir (release/Windows7-Legacy).
+const releaseDir = path.resolve(rootDir, "release", "Windows7-Legacy");
+// Legacy auto-update sabit bir rolling tag uzerinden calisir; ana surumun
+// "releases/latest" akisiyla hicbir sekilde kesismez.
+const LEGACY_TAG = "legacy-win7";
+const LEGACY_JSON = "latest-win7.json";
+const LEGACY_SUFFIX = "-win7";
 const updaterKeyDir = path.resolve(rootDir, "secrets", "updater");
 
 const tauriConf = JSON.parse(
@@ -14,7 +20,7 @@ const tauriConf = JSON.parse(
 const APP_VERSION = tauriConf.version;
 const PRODUCT_NAME = tauriConf.productName;
 const UPDATER_ENDPOINT = tauriConf.plugins?.updater?.endpoints?.[0] ?? "";
-// endpoint örneği: https://github.com/<owner>/<repo>/releases/latest/download/latest.json
+// endpoint örneği: https://github.com/<owner>/<repo>/releases/download/legacy-win7/latest-win7.json
 const GITHUB_REPO_MATCH = UPDATER_ENDPOINT.match(/github\.com\/([^/]+)\/([^/]+)\//);
 const GITHUB_REPO = GITHUB_REPO_MATCH ? `${GITHUB_REPO_MATCH[1]}/${GITHUB_REPO_MATCH[2]}` : null;
 
@@ -91,7 +97,19 @@ try {
   const nsisDir = path.resolve(appDir, "src-tauri", "target", "release", "bundle", "nsis");
   const setupName = `${PRODUCT_NAME}_${APP_VERSION}_x64-setup.exe`;
   const setupSrc = path.resolve(nsisDir, setupName);
-  fs.copyFileSync(setupSrc, path.resolve(musteriDir, "NEVA MOBILE Setup.exe"));
+  fs.copyFileSync(setupSrc, path.resolve(musteriDir, "NEVA MOBILE Win7 Setup.exe"));
+
+  // 6b. Windows 7 Legacy: WebView2 Runtime 109 yukleyicisi setup'in yanina konur.
+  //     (Edge 109 kurumsal yukleyicisi; NSIS hook'u gerekirse --msedgewebview ile calistirir.)
+  const wv2Src = path.resolve(rootDir, "tools", "win7", "WebView2Runtime109-x64.exe");
+  if (fs.existsSync(wv2Src)) {
+    fs.copyFileSync(wv2Src, path.resolve(musteriDir, "WebView2Runtime109-x64.exe"));
+  } else {
+    console.warn(
+      "UYARI: tools/win7/WebView2Runtime109-x64.exe bulunamadı. " +
+      "Win7 makinede WebView2 kurulu değilse uygulama açılmaz; yükleyiciyi pakete ekleyin."
+    );
+  }
 
   // 7. Copy developer binaries
   console.log("Copying NEVA LICENSE MANAGER developer binaries...");
@@ -112,9 +130,14 @@ try {
   // 8. Create README files
   console.log("Writing README documentation...");
   const readmeMusteriContent = 
-`=== NEVA MOBILE (Müşteri Kurulum Paketi) ===
+`=== NEVA MOBILE — WINDOWS 7 LEGACY EDITION (Müşteri Kurulum Paketi) ===
 
-1. "NEVA MOBILE Setup.exe" dosyasını çift tıklayarak çalıştırın.
+Bu paket YALNIZCA Windows 7 SP1 x64 içindir. Windows 10/11 kullanıyorsanız normal sürümü kurun.
+
+0. Bilgisayarda WebView2 Runtime yoksa, kurulumdan ÖNCE bu klasördeki
+   "WebView2Runtime109-x64.exe" dosyasının setup ile aynı klasörde olduğundan emin olun
+   (kurulum gerekirse onu otomatik çalıştırır).
+1. "NEVA MOBILE Win7 Setup.exe" dosyasını çift tıklayarak çalıştırın.
 2. Kurulum bittikten sonra uygulamayı açın.
 3. İlk açılışta karşınıza çıkacak olan "Cihaz Kimliğini" (Machine ID) kopyalayıp satıcınıza iletin.
 4. Size verilecek olan Lisans Kodunu yapıştırarak uygulamayı kullanmaya başlayabilirsiniz.
@@ -138,7 +161,7 @@ Bu klasör lisans kodları üretmek için gerekli araçları içerir:
   //    createUpdaterArtifacts formatına göre imza ya doğrudan setup.exe'nin (.sig) ya da
   //    v1-uyumlu .nsis.zip'in yanındadır; ikisi de desteklenir.
   console.log("\nPreparing auto-update assets (MUSTERI)...");
-  const uploadSetupName = `${SAFE_NAME}_${APP_VERSION}_x64-setup.exe`;
+  const uploadSetupName = `${SAFE_NAME}_${APP_VERSION}_x64-setup${LEGACY_SUFFIX}.exe`;
   const exeSigSrc = `${setupSrc}.sig`;
   const nsisZipSrc = path.resolve(nsisDir, `${setupName}.nsis.zip`);
   const nsisZipSigSrc = `${nsisZipSrc}.sig`;
@@ -165,7 +188,8 @@ Bu klasör lisans kodları üretmek için gerekli araçları içerir:
     ? fs.readFileSync(notesPath, "utf8").trim()
     : `NEVA MOBILE ${APP_VERSION} yayınlandı.`;
 
-  const tag = `v${APP_VERSION}`;
+  // Legacy: surum tag'i yerine sabit rolling tag kullanilir; endpoint hep ayni URL'de kalir.
+  const tag = LEGACY_TAG;
   if (!GITHUB_REPO) {
     throw new Error("tauri.conf.json updater endpoint'i bir GitHub reposuna işaret etmiyor.");
   }
@@ -185,7 +209,7 @@ Bu klasör lisans kodları üretmek için gerekli araçları içerir:
     },
   };
   fs.writeFileSync(
-    path.resolve(musteriDir, "latest.json"),
+    path.resolve(musteriDir, LEGACY_JSON),
     JSON.stringify(latestJson, null, 2),
     "utf8"
   );
@@ -205,7 +229,7 @@ Bu klasör lisans kodları üretmek için gerekli araçları içerir:
     const assets = [
       path.resolve(musteriDir, updaterAssetName),
       path.resolve(musteriDir, `${updaterAssetName}.sig`),
-      path.resolve(musteriDir, "latest.json"),
+      path.resolve(musteriDir, LEGACY_JSON),
     ];
     for (const a of assets) {
       if (!fs.existsSync(a)) throw new Error(`Yüklenecek asset eksik: ${a}`);
@@ -224,9 +248,10 @@ Bu klasör lisans kodları üretmek için gerekli araçları içerir:
       console.log(`Release ${tag} zaten var; asset'ler güncelleniyor (--clobber)...`);
       runCmd(`"${gh}" release upload ${tag} ${assetArgs} --clobber --repo ${GITHUB_REPO}`, appDir);
     } else {
+      // --latest=false: legacy release ana surumun "releases/latest" akisini ASLA devralmamali.
       runCmd(
         `"${gh}" release create ${tag} ${assetArgs} --repo ${GITHUB_REPO} ` +
-          `--title "NEVA MOBILE ${tag}" --notes-file "${notesFile}" --latest`,
+          `--title "NEVA MOBILE Windows 7 Legacy (v${APP_VERSION})" --notes-file "${notesFile}" --latest=false`,
         appDir
       );
     }
