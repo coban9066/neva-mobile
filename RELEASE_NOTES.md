@@ -1,13 +1,31 @@
-# NEVA MOBILE v0.1.5
+# NEVA MOBILE v0.1.6
 
-Bu sürüm, veritabanı güncelleme ve uyumluluk sorunlarını gideren acil bir hotfix içerir.
+Bu sürüm, telefoncuların günlük kullanımını kolaylaştıran yeni özellikler içerir:
+POS komisyon takibi, PDF satış fişi ve Dashboard'da kâr grafikleri.
 
-## Düzeltmeler ve İyileştirmeler
+## Yeni Özellikler
 
-- Migration uyumluluk sorunu giderildi.
-- Veritabanı güncelleme sistemi düzeltildi.
-- Eski sürümden güncelleme alan kullanıcılar için açılış problemi çözüldü.
-- Kararlılık ve uyumluluk iyileştirildi.
+### 💳 POS Komisyonu Desteği
+- Satışta ödeme türü POS seçildiğinde "Banka Komisyonu" alanı görünür.
+- Komisyon yüzde (%) veya sabit tutar (₺) olarak girilebilir.
+- **Kasaya Giren** tutarı otomatik hesaplanır (Satış − Komisyon).
+- **Net Kar**, Kasaya Giren üzerinden hesaplanır (Kasaya Giren − Toplam Maliyet).
+- Komisyon ayrı bir masraf olarak eklenmez; satışın kendi kaydında tutulur.
+- Tüm raporlar (Kasa, Gün/Ay Sonu, Dashboard) bu hesabı kullanır.
+
+### 🧾 PDF Satış Fişi
+- Satış listesinden tek tıkla PDF satış fişi oluşturulur.
+- Fiş içeriği: firma adı, telefon modeli, IMEI, satış tarihi, satış fiyatı,
+  ödeme türü, komisyon (varsa), garanti bilgisi, alıcı adı.
+- Modern, sade tasarım; istenilen konuma kaydedilir.
+
+### 📈 Dashboard Kâr Grafikleri
+- **Son 12 Ay Kâr**: aylık kâr sütun grafiği.
+- **Bu Ay Günlük Kâr**: gün gün kâr çizgi grafiği.
+- Grafikler doğrudan SQLite verilerinden üretilir; sade ve hızlı.
+
+### 🧮 Yeni Dashboard Kartları
+- Toplam Telefon, Toplam Kâr, Bekleyen Garanti, En Çok Satılan Marka.
 
 ## Sistem Gereksinimleri
 - **Standart sürüm:** Windows 10 (1803+) / Windows 11, x64

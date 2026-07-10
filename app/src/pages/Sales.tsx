@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpFromLine, Search, Plus, Trash2 } from "lucide-react";
+import { ArrowUpFromLine, Search, Plus, Trash2, FileText } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { select } from "@/lib/db";
 import { formatKurus, parseLiraInput } from "@/lib/money";
@@ -20,7 +20,16 @@ import { CustomerForm } from "@/components/sales/CustomerForm";
 import { PaymentSelector } from "@/components/sales/PaymentSelector";
 import { ProfitCard } from "@/components/sales/ProfitCard";
 import { SaleActions } from "@/components/sales/SaleActions";
-import { SALE_PAYMENT_LABELS, type StockPhone, type SalePayment, toDbPayment } from "@/components/sales/types";
+import { CommissionInput, parseCommissionRaw } from "@/components/sales/CommissionInput";
+import { generateReceiptPdf } from "@/lib/receipt-pdf";
+import {
+  SALE_PAYMENT_LABELS,
+  type StockPhone,
+  type SalePayment,
+  type CommissionMode,
+  toDbPayment,
+  calcCommissionAmount,
+} from "@/components/sales/types";
 
 interface SaleRow {
   id: number;
@@ -31,7 +40,10 @@ interface SaleRow {
   customer_name: string | null;
   payment_method: string;
   price: number;
+  commission_amount: number;
   net_profit: number;
+  warranty_months: number | null;
+  warranty_type: string | null;
 }
 
 export function SalesPage() {
@@ -79,6 +91,8 @@ export function SalesPage() {
   const [notes, setNotes] = useState("");
   const [priceRaw, setPriceRaw] = useState("");
   const [payment, setPayment] = useState<SalePayment>("cash");
+  const [commissionMode, setCommissionMode] = useState<CommissionMode>("percent");
+  const [commissionRaw, setCommissionRaw] = useState("");
   const [saving, setSaving] = useState(false);
 
   // --- Delete Modal States ---
@@ -131,15 +145,17 @@ export function SalesPage() {
     queryKey: ["sales", listSearch],
     queryFn: () =>
       select<SaleRow>(
-        `SELECT s.id, s.date, s.phone_id, s.price, s.payment_method, p.imei1,
+        `SELECT s.id, s.date, s.phone_id, s.price, s.payment_method, s.commission_amount, p.imei1,
                 COALESCE(b.name || ' ' || p.model, 'Telefon #' || p.id) AS label,
-                c.full_name AS customer_name,
-                vp.net_profit
+                COALESCE(s.contact_name, c.full_name) AS customer_name,
+                vp.net_profit,
+                w.months AS warranty_months, w.type AS warranty_type
          FROM sales s
          JOIN phones p ON p.id = s.phone_id
          LEFT JOIN brands b ON b.id = p.brand_id
          LEFT JOIN contacts c ON c.id = s.contact_id
          LEFT JOIN v_phone_profit vp ON vp.sale_id = s.id
+         LEFT JOIN warranties w ON w.sale_id = s.id AND w.voided_at IS NULL
          WHERE s.deleted_at IS NULL
            AND ($1 = '' OR p.imei1 LIKE $2 OR (b.name || ' ' || p.model) LIKE $2 OR c.full_name LIKE $2)
          ORDER BY s.date DESC LIMIT 300`,
@@ -176,6 +192,9 @@ export function SalesPage() {
       return;
     }
 
+    const hasCommission = payment === "pos" && commissionRaw.trim() !== "";
+    const commissionValue = hasCommission ? parseCommissionRaw(commissionMode, commissionRaw) : null;
+
     setSaving(true);
     try {
       await invoke("save_sale", {
@@ -187,6 +206,8 @@ export function SalesPage() {
           customerName: customerName.trim() || null,
           customerPhone: customerPhone.trim() ? normalizePhone(customerPhone) : null,
           notes: notes.trim() || null,
+          commissionType: hasCommission ? commissionMode : null,
+          commissionValue: commissionValue,
         },
       });
 
@@ -206,6 +227,8 @@ export function SalesPage() {
       setNotes("");
       setPriceRaw("");
       setPayment("cash");
+      setCommissionMode("percent");
+      setCommissionRaw("");
       setPhoneSearch("");
       setViewMode("list");
     } catch (err) {
@@ -237,6 +260,10 @@ export function SalesPage() {
   };
 
   const salePrice = parseLiraInput(priceRaw);
+  const commissionAmount =
+    payment === "pos" && commissionRaw.trim() !== "" && salePrice != null
+      ? calcCommissionAmount(commissionMode, parseCommissionRaw(commissionMode, commissionRaw), salePrice)
+      : 0;
 
   return (
     <div className="flex h-full flex-col">
@@ -315,7 +342,7 @@ export function SalesPage() {
                     <th className="px-2 py-2 font-medium">Ödeme</th>
                     <th className="px-2 py-2 text-right font-medium">Kar</th>
                     <th className="px-4 py-2 text-right font-medium">Satış Tutarı</th>
-                    <th className="px-4 py-2 text-center font-medium w-16">İşlem</th>
+                    <th className="px-4 py-2 text-center font-medium w-20">İşlem</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -344,17 +371,45 @@ export function SalesPage() {
                         {formatKurus(r.price)}
                       </td>
                       <td className="px-4 py-2 text-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteTarget(r);
-                          }}
-                          disabled={isReadOnly(license)}
-                          title="Satış kaydını sil"
-                          className="cursor-pointer rounded p-1 text-fg-muted hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              generateReceiptPdf({
+                                saleId: r.id,
+                                model: r.label,
+                                imei: r.imei1,
+                                date: r.date,
+                                price: r.price,
+                                paymentLabel: getPaymentLabel(r.payment_method),
+                                commissionAmount: r.commission_amount,
+                                warrantyText: r.warranty_months
+                                  ? `${r.warranty_months} ay (${r.warranty_type ?? "store"})`
+                                  : null,
+                                buyerName: r.customer_name,
+                              })
+                                .then(() => toast({ kind: "success", title: "PDF satış fişi oluşturuldu." }))
+                                .catch((err) =>
+                                  toast({ kind: "error", title: `PDF oluşturulamadı: ${String(err)}` })
+                                );
+                            }}
+                            title="PDF Satış Fişi Oluştur"
+                            className="cursor-pointer rounded p-1 text-fg-muted hover:bg-primary/10 hover:text-primary transition-colors"
+                          >
+                            <FileText size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget(r);
+                            }}
+                            disabled={isReadOnly(license)}
+                            title="Satış kaydını sil"
+                            className="cursor-pointer rounded p-1 text-fg-muted hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -419,9 +474,18 @@ export function SalesPage() {
                   <Field label="Ödeme Türü">
                     <PaymentSelector value={payment} onChange={setPayment} />
                   </Field>
+
+                  {payment === "pos" && (
+                    <CommissionInput
+                      mode={commissionMode}
+                      raw={commissionRaw}
+                      onMode={setCommissionMode}
+                      onRaw={setCommissionRaw}
+                    />
+                  )}
                 </div>
 
-                <ProfitCard phone={selectedPhone} salePrice={salePrice} />
+                <ProfitCard phone={selectedPhone} salePrice={salePrice} commissionAmount={commissionAmount} />
               </div>
             )}
 
