@@ -67,11 +67,13 @@ Excel'de ayrı bir sayfa alış için, ayrı bir sayfa satış için. Defterde d
 
 **🛡️ Güvence**
 - Garanti Takibi
+- 🔔 Garanti Alarmı (30 gün)
 - 🧾 Telefon Bazlı Masraf Sistemi
 - Kasa Yönetimi
+- 🧾 Gün Sonu PDF Raporu
 - 🗂️ Veri Yönetimi
 - Lisans Sistemi
-- 📈 Dashboard Kâr Grafikleri
+- 📈 Dashboard Kâr Grafikleri ve Analizleri
 
 </td>
 <td width="33%" valign="top">
@@ -116,11 +118,17 @@ Satışta ödeme türü POS seçildiğinde banka komisyonunu yüzde (%) veya sab
 **🧾 PDF Satış Fişi**
 Tamamlanan her satış için tek tıkla modern tasarımlı bir PDF fiş oluşturun: telefon modeli, IMEI, satış tarihi, fiyat, ödeme türü, komisyon ve garanti bilgisi tek sayfada. İstediğiniz konuma kaydedip müşterinize verebilirsiniz.
 
-**📈 Dashboard Kâr Grafikleri**
-Ana ekranda son 12 ayın kârını sütun grafikte, bu ayın günlük kâr seyrini çizgi grafikte görün. Ayrıca toplam telefon sayısı, toplam kâr, bekleyen garanti adedi ve en çok satılan markanız tek bakışta karşınızda.
+**📈 Dashboard Kâr Grafikleri ve Analizleri**
+Ana ekranda son 12 ayın kârını sütun grafikte, bu ayın günlük kâr seyrini çizgi grafikte görün. Bugünkü kâr, toplam stok değeri, en kârlı markanız ve en çok satılan markanız dahil toplam telefon sayısı, toplam kâr, bekleyen garanti adedi tek bakışta karşınızda.
+
+**🔔 Garanti Alarmı**
+Üretici garantisi 30 günden az kalan telefonlar Dashboard'da ayrı bir kartla öne çıkar. Karta tıklayınca Garanti Takibi ekranı yalnızca bu telefonları listeler; tek tıkla filtreyi kaldırıp tüm listeye dönebilirsiniz.
 
 **🛡️ Garanti Takibi**
 Satılan telefonların garanti süresini, başlangıç ve bitiş tarihlerini kolayca takip edin.
+
+**🧾 Gün Sonu PDF Raporu**
+Kasa ekranından tek tıkla günün özetini PDF olarak alın: günlük ciro, günlük kâr, POS komisyonu, toplam masraf, satış sayısı ve toplam stok. Yazdırılabilir, paylaşılabilir.
 
 **📊 Kasa Yönetimi**
 Toplam alış, satış, kâr ve gider bilgilerinizi tek ekranda görün.
@@ -249,7 +257,7 @@ Gerçek ekranlar, gerçek akış — NEVA MOBILE'ın günlük kullanımda nasıl
 
 **Kurulum:** İndirdiğiniz Setup dosyasını çift tıklayın → kurulum bitince uygulamayı açın → ilk açılışta görünen **Cihaz Kimliği**'ni satıcınıza gönderin → size verilen lisans kodunu yapıştırın. Hepsi bu.
 
-> **Windows 7 notu:** Legacy paketi kurmadan önce Windows 7 SP1 ve güncel Windows Update'lerin (özellikle SHA-2 desteği) kurulu olduğundan emin olun. `WebView2Runtime109-x64.exe` dosyası Setup ile aynı klasörde olmalıdır — WebView2 kurulu değilse kurulum bunu otomatik çalıştırır.
+> **Windows 7 notu:** Legacy paketi kurmadan önce Windows 7 SP1 ve güncel Windows Update'lerin (özellikle SHA-2 desteği) kurulu olduğundan emin olun. `WebView2Runtime109-x64.exe` dosyası Setup ile aynı klasörde olmalıdır — WebView2 kurulu değilse kurulum bunu otomatik çalıştırır ve kurulumun gerçekten tamamlandığını doğrular. Bir sorun olursa açık bir uyarı ile [WebView2 Runtime indirme sayfasına](https://developer.microsoft.com/microsoft-edge/webview2/) yönlendirilirsiniz.
 
 <br>
 
