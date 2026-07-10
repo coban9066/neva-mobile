@@ -6,6 +6,24 @@ use tauri_plugin_sql::{DbInstances, DbPool, Migration, MigrationKind};
 
 const DB_URL: &str = "sqlite:neva.db";
 
+/// Tek doğruluk kaynağı: (version, description, sql). Hem migrator'a verilen
+/// migration listesi hem de checksum uzlaştırma (reconcile) mantığı buradan
+/// beslenir; iki yerde ayrı ayrı tutulursa aralarında sürüklenme (drift) olur.
+const MIGRATIONS_RAW: &[(i64, &str, &str)] = &[
+    (1, "initial_schema", include_str!("../migrations/001_initial.sql")),
+    (2, "seed_catalog", include_str!("../migrations/002_seed.sql")),
+    (3, "device_profile", include_str!("../migrations/003_device_profile.sql")),
+    (4, "manufacturer_warranty", include_str!("../migrations/004_manufacturer_warranty.sql")),
+    (5, "performance_indexes", include_str!("../migrations/005_performance_indexes.sql")),
+    (6, "remove_stock_aging", include_str!("../migrations/006_remove_stock_aging.sql")),
+    (7, "remove_ram", include_str!("../migrations/007_remove_ram.sql")),
+    (8, "add_model_text", include_str!("../migrations/008_add_model_text.sql")),
+    (9, "expense_freeform_category", include_str!("../migrations/009_expense_freeform_category.sql")),
+    (10, "cosmetic_grade_relabel", include_str!("../migrations/010_cosmetic_grade_relabel.sql")),
+    (11, "contact_phone", include_str!("../migrations/011_contact_phone.sql")),
+    (12, "hotfix", include_str!("../migrations/012_hotfix.sql")),
+];
+
 async fn sqlite_pool(
     instances: &State<'_, DbInstances>,
 ) -> Result<sqlx::Pool<sqlx::Sqlite>, String> {
@@ -846,36 +864,86 @@ async fn update_contact_info(
     tx.commit().await.map_err(|e| e.to_string())
 }
 
-fn fix_migration_checksums() {
+/// KÖK NEDEN (v0.1.5 hotfix): sqlx migrator, her migration'ın checksum'unu
+/// `sql.as_bytes()` üzerinden SHA-384 ile hesaplar. Bu depodaki .sql dosyaları
+/// Windows'ta `core.autocrlf=true` ile checkout edildiği için, hangi makinede /
+/// hangi git ayarıyla derlendiğine bağlı olarak `include_str!` bazen LF bazen
+/// CRLF baytları gömüyordu. Sonuç: v0.1.4 ile gerçek kullanıcıların veritabanına
+/// yazılan migration 11 checksum'u, sonraki bir derlemenin (ör. bu hotfix) hesapladığı
+/// checksum'la eşleşmeyip "was previously applied but has been modified" hatasıyla
+/// açılışı tamamen engelliyordu.
+///
+/// Kalıcı çözüm: `.gitattributes` artık tüm `*.sql` dosyalarını LF'e sabitliyor,
+/// böylece bundan sonraki her derleme (Windows 10/11 ve Windows 7 Legacy dahil)
+/// aynı baytları gömecek. Bu fonksiyon yalnızca ZATEN KURULU kullanıcılar için
+/// geçmişte oluşmuş olası LF/CRLF sürüklenmesini bir kereliğine uzlaştırır:
+/// veritabanındaki checksum, migration metninin YALNIZCA satır sonu farklı iki
+/// varyantından (LF veya CRLF) biriyle birebir eşleşiyorsa günceller. Eşleşmiyorsa
+/// dokunmaz — gerçek bir içerik/bozulma sorunu olabilir, sqlx migrator kendi
+/// hatasını versin; hata asla sessizce maskelenmez.
+fn reconcile_migration_checksums() {
     let dir = app_data_dir();
     let db_path = dir.join("neva.db");
     if !db_path.exists() {
         return;
     }
 
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build();
+    let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+        Ok(rt) => rt,
+        Err(_) => return,
+    };
 
-    if let Ok(runtime) = rt {
-        runtime.block_on(async {
-            use sqlx::Connection;
-            let db_url = format!("sqlite:{}", db_path.to_string_lossy());
-            if let Ok(mut conn) = sqlx::SqliteConnection::connect(&db_url).await {
-                // Migration 11 LF checksum:
-                // 9a197b03a88c73ce2ae48823adcc8920e638a6a8d9a5ce48e7be80fa5425378abf27bbae86a60d6435f0d9bd8b34286d
-                let lf_checksum: Vec<u8> = vec![
-                    0x9a, 0x19, 0x7b, 0x03, 0xa8, 0x8c, 0x73, 0xce, 0x2a, 0xe4, 0x88, 0x23, 0xad, 0xcc, 0x89, 0x20,
-                    0xe6, 0x38, 0xa6, 0xa8, 0xd9, 0xa5, 0xce, 0x48, 0xe7, 0xbe, 0x80, 0xfa, 0x54, 0x25, 0x37, 0x8a,
-                    0xbf, 0x27, 0xbb, 0xae, 0x86, 0xa6, 0x0d, 0x64, 0x35, 0xf0, 0xd9, 0xbd, 0x8b, 0x34, 0x28, 0x6d
-                ];
-                let _ = sqlx::query("UPDATE _sqlx_migrations SET checksum = ? WHERE version = 11")
-                    .bind(lf_checksum)
+    rt.block_on(async {
+        use sha2::{Digest, Sha384};
+        use sqlx::Connection;
+
+        let opts = sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(&db_path)
+            .read_only(false);
+        let Ok(mut conn) = sqlx::SqliteConnection::connect_with(&opts).await else {
+            return;
+        };
+
+        let table_exists: Option<(i64,)> = sqlx::query_as(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='_sqlx_migrations'",
+        )
+        .fetch_optional(&mut conn)
+        .await
+        .unwrap_or(None);
+        if table_exists.is_none() {
+            return;
+        }
+
+        for (version, _description, sql) in MIGRATIONS_RAW {
+            let stored: Option<(Vec<u8>,)> =
+                sqlx::query_as("SELECT checksum FROM _sqlx_migrations WHERE version = ?")
+                    .bind(version)
+                    .fetch_optional(&mut conn)
+                    .await
+                    .unwrap_or(None);
+            let Some((stored,)) = stored else {
+                continue;
+            };
+
+            let current = Sha384::digest(sql.as_bytes()).to_vec();
+            if stored == current {
+                continue;
+            }
+
+            let lf = sql.replace("\r\n", "\n");
+            let crlf = lf.replace('\n', "\r\n");
+            let lf_checksum = Sha384::digest(lf.as_bytes()).to_vec();
+            let crlf_checksum = Sha384::digest(crlf.as_bytes()).to_vec();
+
+            if stored == lf_checksum || stored == crlf_checksum {
+                let _ = sqlx::query("UPDATE _sqlx_migrations SET checksum = ? WHERE version = ?")
+                    .bind(&current)
+                    .bind(version)
                     .execute(&mut conn)
                     .await;
             }
-        });
-    }
+        }
+    });
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -883,98 +951,16 @@ pub fn run() {
     // Bekleyen geri yükleme, DB'ye ilk bağlantıdan ÖNCE uygulanmalı.
     apply_pending_restore();
 
-    // Checksum uyumsuzluklarını düzelt.
-    fix_migration_checksums();
+    // Checksum uyumsuzluklarını düzelt (bkz. reconcile_migration_checksums dokümantasyonu).
+    reconcile_migration_checksums();
 
-    let migrations = vec![
-        Migration {
-            version: 1,
-            description: "initial_schema",
-            sql: include_str!("../migrations/001_initial.sql"),
+    let migrations: Vec<Migration> = MIGRATIONS_RAW
+        .iter()
+        .map(|&(version, description, sql)| Migration {
+            version,
+            description,
+            sql,
             kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 2,
-            description: "seed_catalog",
-            sql: include_str!("../migrations/002_seed.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 3,
-            description: "device_profile",
-            sql: include_str!("../migrations/003_device_profile.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 4,
-            description: "manufacturer_warranty",
-            sql: include_str!("../migrations/004_manufacturer_warranty.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 5,
-            description: "performance_indexes",
-            sql: include_str!("../migrations/005_performance_indexes.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 6,
-            description: "remove_stock_aging",
-            sql: include_str!("../migrations/006_remove_stock_aging.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 7,
-            description: "remove_ram",
-            sql: include_str!("../migrations/007_remove_ram.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 8,
-            description: "add_model_text",
-            sql: include_str!("../migrations/008_add_model_text.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 9,
-            description: "expense_freeform_category",
-            sql: include_str!("../migrations/009_expense_freeform_category.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 10,
-            description: "cosmetic_grade_relabel",
-            sql: include_str!("../migrations/010_cosmetic_grade_relabel.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 11,
-            description: "contact_phone",
-            sql: include_str!("../migrations/011_contact_phone.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 12,
-            description: "hotfix",
-            sql: include_str!("../migrations/012_hotfix.sql"),
-            kind: MigrationKind::Up,
-        },
-    ];
-
-    let migrations: Vec<Migration> = migrations
-        .into_iter()
-        .map(|m| {
-            let sql = if m.sql.contains("\r\n") {
-                Box::leak(m.sql.replace("\r\n", "\n").into_boxed_str()) as &'static str
-            } else {
-                m.sql
-            };
-            Migration {
-                version: m.version,
-                description: m.description,
-                sql,
-                kind: m.kind,
-            }
         })
         .collect();
 
