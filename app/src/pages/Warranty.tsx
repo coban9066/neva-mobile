@@ -1,5 +1,7 @@
+import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, X } from "lucide-react";
 import { select } from "@/lib/db";
 import { cn, formatDate } from "@/lib/utils";
 import { remainingDays, formatSpan, warrantyTone, type WarrantyTone } from "@/lib/warranty";
@@ -25,20 +27,34 @@ const TONE_CLASS: Record<WarrantyTone, string> = {
  */
 export function WarrantyPage() {
   const { openPhoneDrawer } = useUi();
+  const location = useLocation();
+  const initialSoon = (location.state as { soon?: boolean } | null)?.soon ?? false;
+  const [soonOnly, setSoonOnly] = useState(initialSoon);
 
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["warranties"],
+    queryKey: ["warranties", soonOnly],
     queryFn: () =>
       select<WarrantyRow>(
-        `SELECT p.id AS phone_id,
-                COALESCE(b.name || ' ' || p.model, 'Telefon #' || p.id) AS label,
-                p.imei1, p.warranty_until
-         FROM phones p
-         LEFT JOIN brands b ON b.id = p.brand_id
-         WHERE p.deleted_at IS NULL
-           AND p.warranty_until IS NOT NULL
-           AND date(p.warranty_until) >= date('now','localtime')
-         ORDER BY p.warranty_until ASC`
+        soonOnly
+          ? `SELECT p.id AS phone_id,
+                    COALESCE(b.name || ' ' || p.model, 'Telefon #' || p.id) AS label,
+                    p.imei1, p.warranty_until
+             FROM phones p
+             LEFT JOIN brands b ON b.id = p.brand_id
+             WHERE p.deleted_at IS NULL
+               AND p.warranty_until IS NOT NULL
+               AND date(p.warranty_until) >= date('now','localtime')
+               AND date(p.warranty_until) <= date('now','localtime','+30 days')
+             ORDER BY p.warranty_until ASC`
+          : `SELECT p.id AS phone_id,
+                    COALESCE(b.name || ' ' || p.model, 'Telefon #' || p.id) AS label,
+                    p.imei1, p.warranty_until
+             FROM phones p
+             LEFT JOIN brands b ON b.id = p.brand_id
+             WHERE p.deleted_at IS NULL
+               AND p.warranty_until IS NOT NULL
+               AND date(p.warranty_until) >= date('now','localtime')
+             ORDER BY p.warranty_until ASC`
       ),
   });
 
@@ -48,6 +64,15 @@ export function WarrantyPage() {
         <ShieldCheck size={15} className="text-primary" strokeWidth={1.75} />
         <h1 className="text-sm font-semibold">Garanti Takibi</h1>
         <span className="text-xs text-fg-muted">üretici garantisi devam eden telefonlar</span>
+        {soonOnly && (
+          <button
+            onClick={() => setSoonOnly(false)}
+            className="ml-2 flex cursor-pointer items-center gap-1 rounded-full bg-warning/12 px-2.5 py-1 text-[11px] font-semibold text-warning hover:bg-warning/20 transition-colors"
+          >
+            30 gün içinde bitecekler
+            <X size={11} />
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -60,8 +85,12 @@ export function WarrantyPage() {
         ) : rows.length === 0 ? (
           <EmptyState
             icon={ShieldCheck}
-            title="Garantisi devam eden telefon yok"
-            description="Alış ekranında (F2) üretici garantisini girin; kalan süre burada takip edilir."
+            title={soonOnly ? "30 gün içinde bitecek garanti yok" : "Garantisi devam eden telefon yok"}
+            description={
+              soonOnly
+                ? "Önümüzdeki 30 gün içinde süresi dolacak üretici garantisi bulunmuyor."
+                : "Alış ekranında (F2) üretici garantisini girin; kalan süre burada takip edilir."
+            }
           />
         ) : (
           <table className="w-full text-[13px]">

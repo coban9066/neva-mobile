@@ -388,7 +388,11 @@ export function SalesPage() {
                                   : null,
                                 buyerName: r.customer_name,
                               })
-                                .then(() => toast({ kind: "success", title: "PDF satış fişi oluşturuldu." }))
+                                .then((saved) => {
+                                  if (saved) {
+                                    toast({ kind: "success", title: "PDF satış fişi oluşturuldu." });
+                                  }
+                                })
                                 .catch((err) =>
                                   toast({ kind: "error", title: `PDF oluşturulamadı: ${String(err)}` })
                                 );

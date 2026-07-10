@@ -46,7 +46,7 @@ function formatKurusPlain(kurus: number): string {
  * Tauri kayıt diyaloğu + `write_binary_file` komutuyla gerçek dosyaya yazılır.
  * Kullanıcı diyaloğu iptal ederse sessizce çıkar.
  */
-export async function generateReceiptPdf(data: ReceiptData): Promise<void> {
+export async function generateReceiptPdf(data: ReceiptData): Promise<boolean> {
   const doc = new jsPDF({ unit: "mm", format: "a5" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginX = 14;
@@ -129,8 +129,9 @@ export async function generateReceiptPdf(data: ReceiptData): Promise<void> {
     defaultPath: `Satis_Fisi_${data.saleId}.pdf`,
     filters: [{ name: "PDF", extensions: ["pdf"] }],
   });
-  if (!targetPath) return;
+  if (!targetPath) return false;
 
   const bytes = Array.from(new Uint8Array(doc.output("arraybuffer")));
   await invoke("write_binary_file", { targetPath, bytes });
+  return true;
 }

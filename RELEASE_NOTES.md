@@ -1,31 +1,39 @@
-# NEVA MOBILE v0.1.6
+# NEVA MOBILE v0.2.0
 
-Bu sürüm, telefoncuların günlük kullanımını kolaylaştıran yeni özellikler içerir:
-POS komisyon takibi, PDF satış fişi ve Dashboard'da kâr grafikleri.
+Bu sürümün amacı yeni özellik yığmak değil, telefoncunun daha hızlı çalışmasını ve
+daha doğru karar vermesini sağlamaktır: garanti alarmı, daha zengin Dashboard
+analizleri, gün sonu PDF raporu ve Windows 7 Legacy'de WebView2 kurulum düzeltmesi.
 
 ## Yeni Özellikler
 
-### 💳 POS Komisyonu Desteği
-- Satışta ödeme türü POS seçildiğinde "Banka Komisyonu" alanı görünür.
-- Komisyon yüzde (%) veya sabit tutar (₺) olarak girilebilir.
-- **Kasaya Giren** tutarı otomatik hesaplanır (Satış − Komisyon).
-- **Net Kar**, Kasaya Giren üzerinden hesaplanır (Kasaya Giren − Toplam Maliyet).
-- Komisyon ayrı bir masraf olarak eklenmez; satışın kendi kaydında tutulur.
-- Tüm raporlar (Kasa, Gün/Ay Sonu, Dashboard) bu hesabı kullanır.
+### 🔔 Garanti Alarmı
+- Dashboard'a **"Yakında Bitecek Garanti"** kartı eklendi.
+- Üretici garantisi 30 günden az kalan telefonları tek bakışta gösterir.
+- Karta tıklayınca Garanti Takibi ekranı yalnızca bu telefonları listeler;
+  filtre etiketinden tek tıkla tüm listeye dönülebilir.
 
-### 🧾 PDF Satış Fişi
-- Satış listesinden tek tıkla PDF satış fişi oluşturulur.
-- Fiş içeriği: firma adı, telefon modeli, IMEI, satış tarihi, satış fiyatı,
-  ödeme türü, komisyon (varsa), garanti bilgisi, alıcı adı.
-- Modern, sade tasarım; istenilen konuma kaydedilir.
+### 📊 Dashboard Analizleri
+- **Bugünkü Kâr**, **Toplam Stok Değeri**, **En Kârlı Marka** kartları eklendi.
+- Mevcut kartlar (Toplam Telefon, Toplam Kâr, Bekleyen Garanti, En Çok Satılan
+  Marka, kâr grafikleri) korunuyor — hiçbir özellik kaldırılmadı.
 
-### 📈 Dashboard Kâr Grafikleri
-- **Son 12 Ay Kâr**: aylık kâr sütun grafiği.
-- **Bu Ay Günlük Kâr**: gün gün kâr çizgi grafiği.
-- Grafikler doğrudan SQLite verilerinden üretilir; sade ve hızlı.
+### 🧾 Gün Sonu PDF Raporu
+- Kasa ekranına **"Gün Sonu PDF"** butonu eklendi.
+- Tek tıkla PDF: Günlük Ciro, Günlük Kâr, POS Komisyonu, Toplam Masraf,
+  Satış Sayısı, Toplam Stok.
+- İstediğiniz konuma kaydedilir, yazdırılabilir ve paylaşılabilir.
 
-### 🧮 Yeni Dashboard Kartları
-- Toplam Telefon, Toplam Kâr, Bekleyen Garanti, En Çok Satılan Marka.
+## Düzeltmeler
+
+### 🛠️ Windows 7 Legacy — WebView2 Kurulum Sorunu
+- Kurulum sonrası "Could not find the WebView2 Runtime" hatası giderildi.
+- Kök neden: kurulum betiği WebView2 bileşeninin gerçekten kurulup kurulmadığını
+  hiç doğrulamıyordu; kurulum sessizce başarısız olsa bile işlem "başarılı"
+  sayılıp devam ediyordu.
+- Artık kurulumdan sonra WebView2 bileşeni kayıt defterinden tekrar doğrulanıyor;
+  gerçekten kurulamazsa kullanıcıya açık bir uyarı ve doğru indirme adresi
+  gösteriliyor.
+- Windows 10/11 sürümü bu değişiklikten etkilenmez.
 
 ## Sistem Gereksinimleri
 - **Standart sürüm:** Windows 10 (1803+) / Windows 11, x64
