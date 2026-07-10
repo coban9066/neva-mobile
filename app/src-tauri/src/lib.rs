@@ -22,6 +22,7 @@ const MIGRATIONS_RAW: &[(i64, &str, &str)] = &[
     (10, "cosmetic_grade_relabel", include_str!("../migrations/010_cosmetic_grade_relabel.sql")),
     (11, "contact_phone", include_str!("../migrations/011_contact_phone.sql")),
     (12, "hotfix", include_str!("../migrations/012_hotfix.sql")),
+    (13, "pos_commission", include_str!("../migrations/013_pos_commission.sql")),
 ];
 
 async fn sqlite_pool(
@@ -301,6 +302,10 @@ pub struct SaleArgs {
     customer_name: Option<String>,
     customer_phone: Option<String>,
     notes: Option<String>,
+    /// Yalnızca payment_method='pos' iken anlamlı: "percent" | "fixed"
+    commission_type: Option<String>,
+    /// percent: yüzde*100 (%2.39 -> 239); fixed: kuruş
+    commission_value: Option<i64>,
 }
 
 /// Satış: sales + phones.status='sold' + cari + kasa geliri tek transaction.
@@ -315,6 +320,26 @@ async fn save_sale(instances: State<'_, DbInstances>, args: SaleArgs) -> Result<
     if !matches!(args.payment_method.as_str(), "cash" | "pos" | "transfer") {
         return Err("Geçersiz ödeme türü.".into());
     }
+
+    // Komisyon yalnızca POS'ta ve sunucu tarafında yeniden hesaplanır; istemci
+    // tutarı doğrudan güvenilmez (fiyat/komisyon tutarlılığı burada garanti edilir).
+    let (commission_type, commission_value, commission_amount): (Option<String>, Option<i64>, i64) =
+        if args.payment_method == "pos" {
+            match (args.commission_type.as_deref(), args.commission_value) {
+                (Some("percent"), Some(v)) if (0..=10000).contains(&v) => (
+                    Some("percent".into()),
+                    Some(v),
+                    (args.price as i128 * v as i128 / 10000) as i64,
+                ),
+                (Some("fixed"), Some(v)) if v >= 0 && v <= args.price => {
+                    (Some("fixed".into()), Some(v), v)
+                }
+                (None, None) => (None, None, 0),
+                _ => return Err("Geçersiz banka komisyonu.".into()),
+            }
+        } else {
+            (None, None, 0)
+        };
 
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -357,8 +382,8 @@ async fn save_sale(instances: State<'_, DbInstances>, args: SaleArgs) -> Result<
     };
 
     let sale_id = sqlx::query(
-        "INSERT INTO sales (phone_id, acquisition_id, contact_id, contact_name, contact_phone, price, payment_method, notes)
-         VALUES (?1,?2,?3,?4,?5,?6,?7,?8)",
+        "INSERT INTO sales (phone_id, acquisition_id, contact_id, contact_name, contact_phone, price, payment_method, notes, commission_type, commission_value, commission_amount)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)",
     )
     .bind(args.phone_id)
     .bind(acq_id)
@@ -368,6 +393,9 @@ async fn save_sale(instances: State<'_, DbInstances>, args: SaleArgs) -> Result<
     .bind(args.price)
     .bind(&args.payment_method)
     .bind(&args.notes)
+    .bind(&commission_type)
+    .bind(commission_value)
+    .bind(commission_amount)
     .execute(&mut *tx)
     .await
     .map_err(|e| e.to_string())?
@@ -408,7 +436,7 @@ async fn save_sale(instances: State<'_, DbInstances>, args: SaleArgs) -> Result<
          VALUES ('in',?1,?2,'sale',?3,'Telefon satışı (' || ?4 || ')')",
     )
     .bind(&args.payment_method)
-    .bind(args.price)
+    .bind(args.price - commission_amount)
     .bind(sale_id)
     .bind(&args.payment_label)
     .execute(&mut *tx)
@@ -727,6 +755,18 @@ async fn backup_database(
     }
 }
 
+/// Rastgele ikili içeriği (PDF satış fişi gibi) kullanıcının seçtiği konuma yazar.
+/// WebView2'de tarayıcı indirme API'si (Blob/`<a download>`) güvenilir çalışmadığından
+/// PDF üretimi JS'de yapılıp bayt dizisi buraya taşınır, gerçek dosya yazımı Rust'ta olur.
+#[tauri::command]
+async fn write_binary_file(target_path: String, bytes: Vec<u8>) -> Result<(), String> {
+    let path = std::path::PathBuf::from(&target_path);
+    if path.file_name().is_none() || path.parent().is_none() {
+        return Err("Geçersiz dosya konumu.".into());
+    }
+    std::fs::write(&path, &bytes).map_err(|e| format!("Dosya yazılamadı: {e}"))
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PhoneQualityArgs {
@@ -985,7 +1025,8 @@ pub fn run() {
             backup_database,
             restore_database,
             update_phone_quality,
-            update_contact_info
+            update_contact_info,
+            write_binary_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

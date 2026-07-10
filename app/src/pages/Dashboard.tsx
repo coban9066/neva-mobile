@@ -6,12 +6,16 @@ import {
   Smartphone,
   PiggyBank,
   Wallet,
+  Layers,
+  ShieldCheck,
+  Award,
 } from "lucide-react";
-import { selectOne } from "@/lib/db";
+import { selectOne, select } from "@/lib/db";
 import { formatKurus } from "@/lib/money";
 import { DashboardCard, type CardTone } from "@/components/dashboard/DashboardCard";
 import { QuickProfitCalculator } from "@/components/dashboard/QuickProfitCalculator";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 
 interface Kpis {
   today_sales_count: number;
@@ -21,6 +25,14 @@ interface Kpis {
   stock_count: number;
   month_profit: number | null;
   cash_balance: number | null;
+  total_phones: number;
+  total_profit: number | null;
+  pending_warranty: number;
+}
+
+interface TopBrandRow {
+  brand: string;
+  sold: number;
 }
 
 function profitTone(v: number | null | undefined): CardTone {
@@ -45,8 +57,28 @@ export function DashboardPage() {
           (SELECT SUM(net_profit) FROM v_phone_profit
              WHERE strftime('%Y-%m', sale_date) = strftime('%Y-%m', 'now', 'localtime')) AS month_profit,
           (SELECT SUM(CASE WHEN direction = 'in' THEN amount ELSE -amount END)
-             FROM till_entries WHERE method = 'cash') AS cash_balance`
+             FROM till_entries WHERE method = 'cash') AS cash_balance,
+          (SELECT COUNT(*) FROM phones WHERE deleted_at IS NULL) AS total_phones,
+          (SELECT SUM(net_profit) FROM v_phone_profit) AS total_profit,
+          (SELECT COUNT(*) FROM phones
+             WHERE deleted_at IS NULL AND warranty_until IS NOT NULL
+               AND date(warranty_until) >= date('now','localtime')) AS pending_warranty`
       ),
+  });
+
+  const { data: topBrand } = useQuery({
+    queryKey: ["dashboard-top-brand"],
+    queryFn: async () => {
+      const rows = await select<TopBrandRow>(
+        `SELECT COALESCE(b.name, 'Diğer') AS brand, COUNT(*) AS sold
+         FROM sales s
+         JOIN phones p ON p.id = s.phone_id
+         LEFT JOIN brands b ON b.id = p.brand_id
+         WHERE s.deleted_at IS NULL
+         GROUP BY brand ORDER BY sold DESC LIMIT 1`
+      );
+      return rows[0] ?? null;
+    },
   });
 
   const cards = [
@@ -84,6 +116,34 @@ export function DashboardPage() {
       value: formatKurus(kpis?.cash_balance ?? 0),
       to: "/kasa",
     },
+    {
+      icon: Layers,
+      label: "Toplam Telefon",
+      value: String(kpis?.total_phones ?? 0),
+      unit: "adet",
+      to: "/telefonlar",
+    },
+    {
+      icon: PiggyBank,
+      label: "Toplam Kâr",
+      value: formatKurus(kpis?.total_profit ?? 0),
+      tone: profitTone(kpis?.total_profit),
+      to: "/kasa",
+    },
+    {
+      icon: ShieldCheck,
+      label: "Bekleyen Garanti",
+      value: String(kpis?.pending_warranty ?? 0),
+      unit: "adet",
+      to: "/garanti",
+    },
+    {
+      icon: Award,
+      label: "En Çok Satılan Marka",
+      value: topBrand?.brand ?? "—",
+      unit: topBrand ? `${topBrand.sold} adet` : undefined,
+      to: "/satislar",
+    },
   ];
 
   return (
@@ -108,6 +168,8 @@ export function DashboardPage() {
           <QuickProfitCalculator />
           <RecentActivity />
         </div>
+
+        <DashboardCharts />
       </div>
     </div>
   );
