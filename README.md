@@ -119,7 +119,7 @@ Satışta ödeme türü POS seçildiğinde banka komisyonunu yüzde (%) veya sab
 Tamamlanan her satış için tek tıkla modern tasarımlı bir PDF fiş oluşturun: telefon modeli, IMEI, satış tarihi, fiyat, ödeme türü, komisyon ve garanti bilgisi tek sayfada. İstediğiniz konuma kaydedip müşterinize verebilirsiniz.
 
 **📈 Dashboard Kâr Grafikleri ve Analizleri**
-Ana ekranda son 12 ayın kârını sütun grafikte, bu ayın günlük kâr seyrini çizgi grafikte görün. Bugünkü kâr, toplam stok değeri, en kârlı markanız ve en çok satılan markanız dahil toplam telefon sayısı, toplam kâr, bekleyen garanti adedi tek bakışta karşınızda.
+Ana ekranda son 6 ayın kârını sütun grafikte, bu ayın günlük kâr seyrini çizgi grafikte görün. Bugünkü kâr, toplam stok değeri, en kârlı markanız dahil toplam telefon sayısı, toplam kâr, bekleyen garanti adedi tek bakışta karşınızda. Kartlar en kritik bilgiler önde olacak şekilde önceliklendirildi, hızlı kâr hesaplayıcı istediğinizde açtığınız katlanabilir bir panel, son işlemler listesi kısa ve gerektiğinde "Tümünü Gör" ile genişleyen bir görünümde — Dashboard, işletmenizin durumunu birkaç saniyede özetler.
 
 **🔔 Garanti Alarmı**
 Üretici garantisi 30 günden az kalan telefonlar Dashboard'da ayrı bir kartla öne çıkar. Karta tıklayınca Garanti Takibi ekranı yalnızca bu telefonları listeler; tek tıkla filtreyi kaldırıp tüm listeye dönebilirsiniz.
