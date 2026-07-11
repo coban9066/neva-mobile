@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowDownToLine,
@@ -8,6 +9,7 @@ import {
   Undo2,
   CalendarClock,
   History,
+  ChevronDown,
 } from "lucide-react";
 import { select } from "@/lib/db";
 import { formatKurus } from "@/lib/money";
@@ -38,11 +40,15 @@ const EVENT_TONE: Record<TimelineEvent["event_type"], string> = {
   reservation: "bg-primary/12 text-primary",
 };
 
+const COLLAPSED_COUNT = 6;
+const EXPANDED_COUNT = 40;
+
 /** Sağ panel: ikonlu işlem timeline'ı — saat, işlem, tutar. */
 export function RecentActivity() {
   const { openPhoneDrawer } = useUi();
+  const [expanded, setExpanded] = useState(false);
 
-  const { data: events = [] } = useQuery({
+  const { data: allEvents = [] } = useQuery({
     queryKey: ["dashboard-recent"],
     queryFn: () =>
       select<RecentEvent>(
@@ -51,9 +57,11 @@ export function RecentActivity() {
          JOIN phones p ON p.id = t.phone_id
          LEFT JOIN brands b ON b.id = p.brand_id
          WHERE p.deleted_at IS NULL
-         ORDER BY t.date DESC LIMIT 8`
+         ORDER BY t.date DESC LIMIT ${EXPANDED_COUNT}`
       ),
   });
+
+  const events = expanded ? allEvents : allEvents.slice(0, COLLAPSED_COUNT);
 
   return (
     <section className="animate-card-in overflow-hidden rounded-lg border border-border bg-surface">
@@ -69,7 +77,7 @@ export function RecentActivity() {
           description="İlk alışınızı F2 ile kaydedin."
         />
       ) : (
-        <ul>
+        <ul className={cn(expanded && "max-h-[420px] overflow-y-auto")}>
           {events.map((ev, i) => {
             const Icon = EVENT_ICONS[ev.event_type];
             return (
@@ -111,6 +119,16 @@ export function RecentActivity() {
             );
           })}
         </ul>
+      )}
+
+      {allEvents.length > COLLAPSED_COUNT && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="flex w-full items-center justify-center gap-1 border-t border-border py-2 text-xs font-medium text-fg-muted transition-colors hover:bg-surface-2/60 hover:text-fg"
+        >
+          {expanded ? "Daha Az Göster" : "Tümünü Gör"}
+          <ChevronDown size={13} className={cn("transition-transform", expanded && "rotate-180")} />
+        </button>
       )}
     </section>
   );

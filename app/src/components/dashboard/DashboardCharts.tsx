@@ -34,18 +34,19 @@ function formatAxisLira(lira: number) {
   return lira === 0 ? "0" : compactLira.format(lira);
 }
 
+const CHART_MONTHS = 6;
 const MIN_CHART_MONTHS = 3;
 
 /**
- * Son 12 aylık pencereyi oluşturur, ancak henüz o kadar geçmişi olmayan
+ * Son 6 aylık pencereyi oluşturur, ancak henüz o kadar geçmişi olmayan
  * (yeni başlayan) işletmelerde grafiği anlamsızca boş aylarla doldurmak yerine
  * ilk satıştan bugüne kadar olan aralığı gösterir (en az MIN_CHART_MONTHS ay).
  */
-function last12Months(rows: MonthlyRow[]) {
+function lastNMonths(rows: MonthlyRow[]) {
   const byYm = new Map(rows.map((r) => [r.ym, r.profit]));
   const now = new Date();
   const full: { label: string; ym: string; profit: number }[] = [];
-  for (let i = 11; i >= 0; i--) {
+  for (let i = CHART_MONTHS - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     full.push({ label: MONTH_LABELS[d.getMonth()], ym, profit: (byYm.get(ym) ?? 0) / 100 });
@@ -65,7 +66,7 @@ function ChartTooltip({ active, payload, label }: any) {
   );
 }
 
-/** Dashboard kâr grafikleri: son 12 ay (sütun) + bu ay günlük (çizgi). Sade, bilgi odaklı. */
+/** Dashboard kâr grafikleri: son 6 ay (sütun) + bu ay günlük (çizgi). Sade, bilgi odaklı. */
 export function DashboardCharts() {
   const { data: monthly = [] } = useQuery({
     queryKey: ["dashboard-chart-monthly"],
@@ -73,7 +74,7 @@ export function DashboardCharts() {
       select<MonthlyRow>(
         `SELECT strftime('%Y-%m', sale_date) AS ym, SUM(net_profit) AS profit
          FROM v_phone_profit
-         WHERE sale_date >= date('now','localtime','-11 months','start of month')
+         WHERE sale_date >= date('now','localtime','-5 months','start of month')
          GROUP BY ym ORDER BY ym`
       ),
   });
@@ -89,9 +90,9 @@ export function DashboardCharts() {
       ),
   });
 
-  const monthlyData = last12Months(monthly);
+  const monthlyData = lastNMonths(monthly);
   const monthlyTitle =
-    monthlyData.length >= 12 ? "Son 12 Ay Kâr" : `Son ${monthlyData.length} Ay Kâr`;
+    monthlyData.length >= CHART_MONTHS ? `Son ${CHART_MONTHS} Ay Kâr` : `Son ${monthlyData.length} Ay Kâr`;
   const dailyData = daily.map((r) => ({
     label: r.d.slice(8, 10),
     profit: r.profit / 100,
@@ -101,7 +102,7 @@ export function DashboardCharts() {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <section className="rounded-lg border border-border bg-surface p-4">
         <h2 className="text-[13px] font-semibold">{monthlyTitle}</h2>
-        <div className="mt-2 h-[180px]">
+        <div className="mt-2 h-[260px]">
           {monthly.length === 0 ? (
             <div className="flex h-full items-center justify-center text-xs text-fg-muted">
               Henüz kâr verisi yok. İlk satıştan sonra burada trend görünecek.
@@ -133,7 +134,7 @@ export function DashboardCharts() {
 
       <section className="rounded-lg border border-border bg-surface p-4">
         <h2 className="text-[13px] font-semibold">Bu Ay Günlük Kâr</h2>
-        <div className="mt-2 h-[180px]">
+        <div className="mt-2 h-[260px]">
           {dailyData.length === 0 ? (
             <div className="flex h-full items-center justify-center text-xs text-fg-muted">
               Bu ay henüz satış yok.
