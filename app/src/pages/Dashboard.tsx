@@ -8,7 +8,9 @@ import {
   Wallet,
   Layers,
   ShieldCheck,
+  ShieldAlert,
   Award,
+  Coins,
 } from "lucide-react";
 import { selectOne, select } from "@/lib/db";
 import { formatKurus } from "@/lib/money";
@@ -28,11 +30,19 @@ interface Kpis {
   total_phones: number;
   total_profit: number | null;
   pending_warranty: number;
+  today_profit: number | null;
+  stock_value: number | null;
+  warranty_soon: number;
 }
 
 interface TopBrandRow {
   brand: string;
   sold: number;
+}
+
+interface TopProfitBrandRow {
+  brand: string;
+  profit: number;
 }
 
 function profitTone(v: number | null | undefined): CardTone {
@@ -62,7 +72,14 @@ export function DashboardPage() {
           (SELECT SUM(net_profit) FROM v_phone_profit) AS total_profit,
           (SELECT COUNT(*) FROM phones
              WHERE deleted_at IS NULL AND warranty_until IS NOT NULL
-               AND date(warranty_until) >= date('now','localtime')) AS pending_warranty`
+               AND date(warranty_until) >= date('now','localtime')) AS pending_warranty,
+          (SELECT SUM(net_profit) FROM v_phone_profit
+             WHERE date(sale_date) = date('now','localtime')) AS today_profit,
+          (SELECT total_value FROM v_stock_value) AS stock_value,
+          (SELECT COUNT(*) FROM phones
+             WHERE deleted_at IS NULL AND warranty_until IS NOT NULL
+               AND date(warranty_until) >= date('now','localtime')
+               AND date(warranty_until) <= date('now','localtime','+30 days')) AS warranty_soon`
       ),
   });
 
@@ -76,6 +93,20 @@ export function DashboardPage() {
          LEFT JOIN brands b ON b.id = p.brand_id
          WHERE s.deleted_at IS NULL
          GROUP BY brand ORDER BY sold DESC LIMIT 1`
+      );
+      return rows[0] ?? null;
+    },
+  });
+
+  const { data: topProfitBrand } = useQuery({
+    queryKey: ["dashboard-top-profit-brand"],
+    queryFn: async () => {
+      const rows = await select<TopProfitBrandRow>(
+        `SELECT COALESCE(b.name, 'Diğer') AS brand, SUM(vp.net_profit) AS profit
+         FROM v_phone_profit vp
+         JOIN phones p ON p.id = vp.phone_id
+         LEFT JOIN brands b ON b.id = p.brand_id
+         GROUP BY brand ORDER BY profit DESC LIMIT 1`
       );
       return rows[0] ?? null;
     },
@@ -144,6 +175,35 @@ export function DashboardPage() {
       unit: topBrand ? `${topBrand.sold} adet` : undefined,
       to: "/satislar",
     },
+    {
+      icon: Coins,
+      label: "Bugünkü Kâr",
+      value: formatKurus(kpis?.today_profit ?? 0),
+      tone: profitTone(kpis?.today_profit),
+      to: "/kasa",
+    },
+    {
+      icon: Layers,
+      label: "Toplam Stok Değeri",
+      value: formatKurus(kpis?.stock_value ?? 0),
+      to: "/telefonlar",
+    },
+    {
+      icon: Award,
+      label: "En Kârlı Marka",
+      value: topProfitBrand?.brand ?? "—",
+      unit: topProfitBrand ? formatKurus(topProfitBrand.profit) : undefined,
+      to: "/satislar",
+    },
+    {
+      icon: ShieldAlert,
+      label: "Yakında Bitecek Garanti",
+      value: String(kpis?.warranty_soon ?? 0),
+      unit: "adet · 30 gün",
+      tone: (kpis?.warranty_soon ?? 0) > 0 ? ("warning" as CardTone) : "default",
+      to: "/garanti",
+      state: { soon: true },
+    },
   ];
 
   return (
@@ -159,7 +219,7 @@ export function DashboardPage() {
               unit={c.unit}
               tone={c.tone}
               index={i}
-              onClick={() => navigate(c.to)}
+              onClick={() => navigate(c.to, "state" in c ? { state: c.state } : undefined)}
             />
           ))}
         </div>

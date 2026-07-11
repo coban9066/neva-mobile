@@ -9,14 +9,16 @@ import {
   Search,
   Printer,
   FileSpreadsheet,
+  FileText,
 } from "lucide-react";
-import { select, execute } from "@/lib/db";
+import { select, selectOne, execute } from "@/lib/db";
 import { formatKurus, parseLiraInput } from "@/lib/money";
 import { formatDateTime, cn } from "@/lib/utils";
 import { useUi, isReadOnly } from "@/stores/ui";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Field } from "@/components/ui/input";
+import { generateDailyReportPdf } from "@/lib/daily-report-pdf";
 
 interface TillRow {
   id: number;
@@ -296,6 +298,45 @@ export function KasaPage() {
     window.print();
   };
 
+  // --- Gün Sonu PDF Raporu ---
+  const handleDailyReportPdf = async () => {
+    try {
+      const today = getLocalDateString(new Date());
+      const row = await selectOne<{
+        daily_revenue: number | null;
+        daily_profit: number | null;
+        pos_commission: number | null;
+        total_expenses: number | null;
+        sales_count: number;
+        total_stock: number;
+      }>(
+        `SELECT
+          (SELECT SUM(price) FROM sales WHERE date(date)=date('now','localtime') AND deleted_at IS NULL) AS daily_revenue,
+          (SELECT SUM(net_profit) FROM v_phone_profit WHERE date(sale_date)=date('now','localtime')) AS daily_profit,
+          (SELECT SUM(commission_amount) FROM sales WHERE date(date)=date('now','localtime') AND deleted_at IS NULL AND payment_method='pos') AS pos_commission,
+          (SELECT SUM(amount) FROM expenses WHERE date(date)=date('now','localtime') AND deleted_at IS NULL) AS total_expenses,
+          (SELECT COUNT(*) FROM sales WHERE date(date)=date('now','localtime') AND deleted_at IS NULL) AS sales_count,
+          (SELECT phone_count FROM v_stock_value) AS total_stock`
+      );
+
+      const saved = await generateDailyReportPdf({
+        date: today,
+        dailyRevenue: row?.daily_revenue ?? 0,
+        dailyProfit: row?.daily_profit ?? 0,
+        posCommission: row?.pos_commission ?? 0,
+        totalExpenses: row?.total_expenses ?? 0,
+        salesCount: row?.sales_count ?? 0,
+        totalStock: row?.total_stock ?? 0,
+      });
+
+      if (saved) {
+        toast({ kind: "success", title: "Gün sonu raporu PDF olarak oluşturuldu." });
+      }
+    } catch (err) {
+      toast({ kind: "error", title: `Rapor oluşturulamadı: ${String(err)}` });
+    }
+  };
+
   const activeFilterLabel = {
     today: "Gün Sonu Raporu (Bugün)",
     week: "Haftalık Kasa Raporu (Bu Hafta)",
@@ -446,6 +487,16 @@ export function KasaPage() {
           >
             <Printer size={13} />
             Yazdır
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={handleDailyReportPdf}
+            title="Gün Sonu Raporu (PDF)"
+            className="h-7 text-xs px-2.5 gap-1.5"
+          >
+            <FileText size={13} />
+            Gün Sonu PDF
           </Button>
         </div>
       </div>
