@@ -1,45 +1,26 @@
-# NEVA MOBILE v0.2.0
+# NEVA MOBILE v0.2.1
 
-Bu sürümün amacı yeni özellik yığmak değil, telefoncunun daha hızlı çalışmasını ve
-daha doğru karar vermesini sağlamaktır: garanti alarmı, daha zengin Dashboard
-analizleri, gün sonu PDF raporu ve Windows 7 Legacy'de WebView2 kurulum düzeltmesi.
+Bu sürüm tamamen Dashboard UX revizyonudur. Yeni özellik eklenmedi, mevcut hiçbir
+özellik bozulmadı — amaç, telefoncunun işletmesinin durumunu ekranı açar açmaz
+5 saniye içinde görebilmesi.
 
-## Yeni Özellikler
+## 🖥️ Dashboard Yeniden Tasarlandı
 
-### 🔔 Garanti Alarmı
-- Dashboard'a **"Yakında Bitecek Garanti"** kartı eklendi.
-- Üretici garantisi 30 günden az kalan telefonları tek bakışta gösterir.
-- Karta tıklayınca Garanti Takibi ekranı yalnızca bu telefonları listeler;
-  filtre etiketinden tek tıkla tüm listeye dönülebilir.
-
-### 📊 Dashboard Analizleri
-- **Bugünkü Kâr**, **Toplam Stok Değeri**, **En Kârlı Marka** kartları eklendi.
-- Mevcut kartlar (Toplam Telefon, Toplam Kâr, Bekleyen Garanti, En Çok Satılan
-  Marka, kâr grafikleri) korunuyor — hiçbir özellik kaldırılmadı.
-
-### 🧾 Gün Sonu PDF Raporu
-- Kasa ekranına **"Gün Sonu PDF"** butonu eklendi.
-- Tek tıkla PDF: Günlük Ciro, Günlük Kâr, POS Komisyonu, Toplam Masraf,
-  Satış Sayısı, Toplam Stok.
-- İstediğiniz konuma kaydedilir, yazdırılabilir ve paylaşılabilir.
-
-## Düzeltmeler
-
-### 📈 Dashboard Kâr Grafikleri Düzenlendi
-- İşletme henüz 12 aylık geçmişe sahip değilse grafik artık anlamsızca boş
-  aylarla doldurulmuyor; yalnızca gerçek verinin bulunduğu ay aralığı gösteriliyor.
-- Grafik ekseni etiketleri (ör. "243.000") dar alanda kırpılıp okunmaz hale
-  geliyordu; artık kısaltılmış ve tam okunur biçimde gösteriliyor (ör. "243 B").
-
-### 🛠️ Windows 7 Legacy — WebView2 Kurulum Sorunu
-- Kurulum sonrası "Could not find the WebView2 Runtime" hatası giderildi.
-- Kök neden: kurulum betiği WebView2 bileşeninin gerçekten kurulup kurulmadığını
-  hiç doğrulamıyordu; kurulum sessizce başarısız olsa bile işlem "başarılı"
-  sayılıp devam ediyordu.
-- Artık kurulumdan sonra WebView2 bileşeni kayıt defterinden tekrar doğrulanıyor;
-  gerçekten kurulamazsa kullanıcıya açık bir uyarı ve doğru indirme adresi
-  gösteriliyor.
-- Windows 10/11 sürümü bu değişiklikten etkilenmez.
+- **Kartlar önceliklendirildi:** İlk satırda yalnızca en kritik 5 bilgi
+  (Bugünkü Kâr, Bugünkü Satış, Bu Ay Net Kâr, Kasadaki Nakit, Stoktaki Telefon);
+  ikinci satırda destekleyici 5 bilgi (Toplam Stok Değeri, Toplam Telefon,
+  Bekleyen Garanti, Yakında Bitecek Garanti, En Kârlı Marka).
+- **Grafikler ortaya taşındı ve büyütüldü:** "Son 6 Ay Kâr" ve "Bu Ay Günlük Kâr"
+  grafikleri artık sayfanın en altına sıkışmıyor, kartların hemen altında ve
+  daha önce net kâr hesaplaması ile grafik arasındaki dengesizlik giderildi.
+- **Son İşlemler kısaltıldı:** Varsayılan olarak yalnızca son 6 işlem gösterilir;
+  altındaki **"Tümünü Gör"** butonuyla listeyi genişletebilirsiniz.
+- **Kar Hesapla artık katlanabilir:** Dashboard açıldığında kapalı gelir, ihtiyaç
+  duyduğunuzda tek tıkla açılır — sürekli yer kaplamaz.
+- **Boşluklar azaltıldı:** Kartlar birbirine daha yakın, scroll miktarı minimuma
+  indirildi; 1080p ekranlarda Dashboard'ın tamamına yakını tek ekranda görünür.
+- 1366×768, 1920×1080 ve 2K çözünürlüklerinde test edildi; kartlar taşmıyor,
+  renk paleti ve genel görünüm değişmedi.
 
 ## Sistem Gereksinimleri
 - **Standart sürüm:** Windows 10 (1803+) / Windows 11, x64
