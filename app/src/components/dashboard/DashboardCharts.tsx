@@ -27,16 +27,32 @@ const MONTH_LABELS = [
   "Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara",
 ];
 
+const compactLira = new Intl.NumberFormat("tr-TR", { notation: "compact", maximumFractionDigits: 1 });
+
+/** Y ekseni etiketi: dar eksen genişliğinde tam tutar sığmadığı için kısaltılmış gösterim. */
+function formatAxisLira(lira: number) {
+  return lira === 0 ? "0" : compactLira.format(lira);
+}
+
+const MIN_CHART_MONTHS = 3;
+
+/**
+ * Son 12 aylık pencereyi oluşturur, ancak henüz o kadar geçmişi olmayan
+ * (yeni başlayan) işletmelerde grafiği anlamsızca boş aylarla doldurmak yerine
+ * ilk satıştan bugüne kadar olan aralığı gösterir (en az MIN_CHART_MONTHS ay).
+ */
 function last12Months(rows: MonthlyRow[]) {
   const byYm = new Map(rows.map((r) => [r.ym, r.profit]));
-  const out: { label: string; profit: number }[] = [];
   const now = new Date();
+  const full: { label: string; ym: string; profit: number }[] = [];
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    out.push({ label: MONTH_LABELS[d.getMonth()], profit: (byYm.get(ym) ?? 0) / 100 });
+    full.push({ label: MONTH_LABELS[d.getMonth()], ym, profit: (byYm.get(ym) ?? 0) / 100 });
   }
-  return out;
+  const firstDataIdx = full.findIndex((m) => byYm.has(m.ym));
+  const start = firstDataIdx === -1 ? full.length - MIN_CHART_MONTHS : Math.min(firstDataIdx, full.length - MIN_CHART_MONTHS);
+  return full.slice(Math.max(0, start));
 }
 
 function ChartTooltip({ active, payload, label }: any) {
@@ -74,6 +90,8 @@ export function DashboardCharts() {
   });
 
   const monthlyData = last12Months(monthly);
+  const monthlyTitle =
+    monthlyData.length >= 12 ? "Son 12 Ay Kâr" : `Son ${monthlyData.length} Ay Kâr`;
   const dailyData = daily.map((r) => ({
     label: r.d.slice(8, 10),
     profit: r.profit / 100,
@@ -82,27 +100,34 @@ export function DashboardCharts() {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <section className="rounded-lg border border-border bg-surface p-4">
-        <h2 className="text-[13px] font-semibold">Son 12 Ay Kâr</h2>
+        <h2 className="text-[13px] font-semibold">{monthlyTitle}</h2>
         <div className="mt-2 h-[180px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={monthlyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-              <CartesianGrid vertical={false} stroke="var(--color-border)" />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, fill: "var(--color-fg-muted)" }}
-                axisLine={{ stroke: "var(--color-border)" }}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 10, fill: "var(--color-fg-muted)" }}
-                axisLine={false}
-                tickLine={false}
-                width={44}
-              />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-border)", opacity: 0.4 }} />
-              <Bar dataKey="profit" fill="var(--color-primary)" radius={[3, 3, 0, 0]} maxBarSize={22} />
-            </BarChart>
-          </ResponsiveContainer>
+          {monthly.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-xs text-fg-muted">
+              Henüz kâr verisi yok. İlk satıştan sonra burada trend görünecek.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke="var(--color-border)" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: "var(--color-fg-muted)" }}
+                  axisLine={{ stroke: "var(--color-border)" }}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: "var(--color-fg-muted)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={54}
+                  tickFormatter={formatAxisLira}
+                />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-border)", opacity: 0.4 }} />
+                <Bar dataKey="profit" fill="var(--color-primary)" radius={[3, 3, 0, 0]} maxBarSize={22} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </section>
 
@@ -127,7 +152,8 @@ export function DashboardCharts() {
                   tick={{ fontSize: 10, fill: "var(--color-fg-muted)" }}
                   axisLine={false}
                   tickLine={false}
-                  width={44}
+                  width={54}
+                  tickFormatter={formatAxisLira}
                 />
                 <Tooltip content={<ChartTooltip />} cursor={{ stroke: "var(--color-border)" }} />
                 <Line

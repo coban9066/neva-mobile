@@ -25,6 +25,12 @@ analizleri, gün sonu PDF raporu ve Windows 7 Legacy'de WebView2 kurulum düzelt
 
 ## Düzeltmeler
 
+### 📈 Dashboard Kâr Grafikleri Düzenlendi
+- İşletme henüz 12 aylık geçmişe sahip değilse grafik artık anlamsızca boş
+  aylarla doldurulmuyor; yalnızca gerçek verinin bulunduğu ay aralığı gösteriliyor.
+- Grafik ekseni etiketleri (ör. "243.000") dar alanda kırpılıp okunmaz hale
+  geliyordu; artık kısaltılmış ve tam okunur biçimde gösteriliyor (ör. "243 B").
+
 ### 🛠️ Windows 7 Legacy — WebView2 Kurulum Sorunu
 - Kurulum sonrası "Could not find the WebView2 Runtime" hatası giderildi.
 - Kök neden: kurulum betiği WebView2 bileşeninin gerçekten kurulup kurulmadığını
