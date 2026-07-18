@@ -25,6 +25,7 @@ const MIGRATIONS_RAW: &[(i64, &str, &str)] = &[
     (13, "pos_commission", include_str!("../migrations/013_pos_commission.sql")),
     (14, "etiket_numarasi", include_str!("../migrations/014_etiket_numarasi.sql")),
     (15, "partial_payment", include_str!("../migrations/015_partial_payment.sql")),
+    (16, "imei_optional", include_str!("../migrations/016_imei_optional.sql")),
 ];
 
 async fn sqlite_pool(
@@ -64,7 +65,8 @@ pub struct PurchaseCheck {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PurchaseArgs {
-    imei: String,
+    /// Opsiyonel — bazı telefoncular cihazı aldıktan sonra IMEI girmeyi tercih eder.
+    imei: Option<String>,
     brand_id: i64,
     model: String,
     color: Option<String>,
@@ -132,16 +134,21 @@ async fn save_purchase(
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty());
+    let imei = args.imei.as_deref().map(str::trim).filter(|s| !s.is_empty());
 
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
-    let existing: Option<(i64, String)> = sqlx::query_as(
-        "SELECT id, status FROM phones WHERE (imei1 = ?1 OR imei2 = ?1) AND deleted_at IS NULL",
-    )
-    .bind(&args.imei)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(|e| e.to_string())?;
+    // IMEI verilmediyse eşleşecek bir "mevcut telefon" yoktur — her zaman yeni kayıt açılır.
+    let existing: Option<(i64, String)> = match imei {
+        Some(imei) => sqlx::query_as(
+            "SELECT id, status FROM phones WHERE (imei1 = ?1 OR imei2 = ?1) AND deleted_at IS NULL",
+        )
+        .bind(imei)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?,
+        None => None,
+    };
 
     if let Some(tag) = etiket_numarasi {
         let clash: Option<(i64,)> = sqlx::query_as(
@@ -192,7 +199,7 @@ async fn save_purchase(
                                  warranty_until, etiket_numarasi, status, ownership)
              VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,'in_stock','stock')",
         )
-        .bind(&args.imei)
+        .bind(imei)
         .bind(args.brand_id)
         .bind(&args.model)
         .bind(&args.color)
@@ -1000,6 +1007,45 @@ async fn update_phone_tag(
     tx.commit().await.map_err(|e| e.to_string())
 }
 
+/// Telefon detayından IMEI sonradan eklenir/değiştirilir/silinir (None → temizler).
+/// Alışta IMEI zorunlu değildir; benzersizlik yalnızca doluysa kontrol edilir.
+#[tauri::command]
+async fn update_phone_imei(
+    instances: State<'_, DbInstances>,
+    phone_id: i64,
+    imei1: Option<String>,
+) -> Result<(), String> {
+    let pool = sqlite_pool(&instances).await?;
+    license::ensure_writable(&pool).await?;
+
+    let imei = imei1.as_deref().map(str::trim).filter(|s| !s.is_empty());
+
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+    if let Some(imei) = imei {
+        let clash: Option<(i64,)> = sqlx::query_as(
+            "SELECT id FROM phones WHERE (imei1 = ?1 OR imei2 = ?1) AND id IS NOT ?2 AND deleted_at IS NULL",
+        )
+        .bind(imei)
+        .bind(phone_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+        if clash.is_some() {
+            return Err(format!("IMEI \"{imei}\" başka bir telefonda kayıtlı."));
+        }
+    }
+
+    sqlx::query("UPDATE phones SET imei1=?2, updated_at=datetime('now','localtime') WHERE id=?1")
+        .bind(phone_id)
+        .bind(imei)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    tx.commit().await.map_err(|e| e.to_string())
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContactInfoArgs {
@@ -1179,6 +1225,7 @@ pub fn run() {
             restore_database,
             update_phone_quality,
             update_phone_tag,
+            update_phone_imei,
             update_contact_info,
             write_binary_file
         ])

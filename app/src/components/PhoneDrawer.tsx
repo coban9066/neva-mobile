@@ -22,7 +22,7 @@ import {
 import { selectOne, select } from "@/lib/db";
 import { useUi, isReadOnly } from "@/stores/ui";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
-import { formatKurus } from "@/lib/money";
+import { formatKurus, formatKurusPrivate } from "@/lib/money";
 import { remainingDays, formatSpan } from "@/lib/warranty";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ import {
 
 interface PhoneDetail {
   id: number;
-  imei1: string;
+  imei1: string | null;
   imei2: string | null;
   brand_name: string | null;
   model_name: string | null;
@@ -85,7 +85,7 @@ const EVENT_COLOR: Record<TimelineEvent["event_type"], string> = {
 };
 
 export function PhoneDrawer() {
-  const { phoneDrawerId, closePhoneDrawer, toast, license } = useUi();
+  const { phoneDrawerId, closePhoneDrawer, toast, license, privacyMode } = useUi();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [tab, setTab] = useState<"summary" | "people" | "timeline">("summary");
@@ -96,6 +96,9 @@ export function PhoneDrawer() {
   const [tagEditing, setTagEditing] = useState(false);
   const [tagValue, setTagValue] = useState("");
   const [tagSaving, setTagSaving] = useState(false);
+  const [imeiEditing, setImeiEditing] = useState(false);
+  const [imeiEditValue, setImeiEditValue] = useState("");
+  const [imeiEditSaving, setImeiEditSaving] = useState(false);
   const open = phoneDrawerId !== null;
   const readOnly = isReadOnly(license);
 
@@ -105,6 +108,7 @@ export function PhoneDrawer() {
     setImeiOpen(false);
     setDeleteOpen(false);
     setTagEditing(false);
+    setImeiEditing(false);
   }, [open, phoneDrawerId]);
 
   useEffect(() => {
@@ -166,6 +170,25 @@ export function PhoneDrawer() {
     }
   }
 
+  async function saveImei() {
+    if (!phone || imeiEditSaving) return;
+    setImeiEditSaving(true);
+    try {
+      await invoke("update_phone_imei", {
+        phoneId: phone.id,
+        imei1: imeiEditValue.replace(/\D/g, "").trim() || null,
+      });
+      await qc.invalidateQueries({ queryKey: ["phone-detail", phone.id] });
+      await qc.invalidateQueries({ queryKey: ["phones"] });
+      setImeiEditing(false);
+      toast({ kind: "success", title: "IMEI güncellendi" });
+    } catch (e) {
+      toast({ kind: "error", title: `Kaydedilemedi: ${String(e)}` });
+    } finally {
+      setImeiEditSaving(false);
+    }
+  }
+
   async function handleDelete() {
     if (!phone?.current_acquisition_id || deleting) return;
     setDeleting(true);
@@ -201,16 +224,65 @@ export function PhoneDrawer() {
                       {phone.storage_gb ? `${phone.storage_gb}GB` : ""} {phone.color ?? ""}
                     </span>
                   </h2>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(phone.imei1);
-                      toast({ kind: "info", title: "IMEI kopyalandı" });
-                    }}
-                    className="mt-1 inline-flex cursor-pointer items-center gap-1 font-mono text-xs text-fg-muted hover:text-fg"
-                    title="Kopyala"
-                  >
-                    {phone.imei1} <Copy size={11} />
-                  </button>
+                  {!imeiEditing ? (
+                    <div className="mt-1 flex items-center gap-1">
+                      {phone.imei1 ? (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(phone.imei1!);
+                            toast({ kind: "info", title: "IMEI kopyalandı" });
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-1 font-mono text-xs text-fg-muted hover:text-fg"
+                          title="Kopyala"
+                        >
+                          {phone.imei1} <Copy size={11} />
+                        </button>
+                      ) : (
+                        <span className="text-xs text-fg-muted">IMEI girilmemiş</span>
+                      )}
+                      {!readOnly && (
+                        <button
+                          onClick={() => {
+                            setImeiEditValue(phone.imei1 ?? "");
+                            setImeiEditing(true);
+                          }}
+                          className="cursor-pointer rounded p-0.5 text-fg-muted hover:bg-surface-2 hover:text-fg"
+                          title="IMEI'yi düzenle"
+                        >
+                          <Pencil size={10} />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mt-1 flex items-center gap-1">
+                      <input
+                        autoFocus
+                        value={imeiEditValue}
+                        onChange={(e) => setImeiEditValue(e.target.value.replace(/\D/g, "").slice(0, 15))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void saveImei();
+                          if (e.key === "Escape") setImeiEditing(false);
+                        }}
+                        placeholder="15 haneli IMEI"
+                        className="h-6 w-32 rounded border border-border-strong bg-surface px-1.5 font-mono text-xs focus:border-primary focus:outline-none"
+                      />
+                      <button
+                        onClick={saveImei}
+                        disabled={imeiEditSaving}
+                        className="cursor-pointer rounded p-0.5 text-success hover:bg-success/10 disabled:opacity-50"
+                        title="Kaydet"
+                      >
+                        <Check size={12} />
+                      </button>
+                      <button
+                        onClick={() => setImeiEditing(false)}
+                        className="cursor-pointer rounded p-0.5 text-fg-muted hover:bg-surface-2"
+                        title="Vazgeç"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
 
                   {!tagEditing ? (
                     <div className="mt-1 flex items-center gap-1">
@@ -281,21 +353,21 @@ export function PhoneDrawer() {
                 <div className="rounded-md bg-surface-2 px-2 py-1.5">
                   <p className="text-[10px] uppercase text-fg-muted">Alış</p>
                   <p className="tabular text-[13px] font-semibold">
-                    {formatKurus(phone.purchase_price)}
+                    {formatKurusPrivate(phone.purchase_price, privacyMode)}
                   </p>
                 </div>
                 <div className="rounded-md bg-surface-2 px-2 py-1.5">
                   <p className="text-[10px] uppercase text-fg-muted">Masraf</p>
                   <p className="tabular text-[13px] font-semibold">
                     {phone.total_cost != null && phone.purchase_price != null
-                      ? formatKurus(phone.total_cost - phone.purchase_price)
+                      ? formatKurusPrivate(phone.total_cost - phone.purchase_price, privacyMode)
                       : "—"}
                   </p>
                 </div>
                 <div className="rounded-md bg-surface-2 px-2 py-1.5">
                   <p className="text-[10px] uppercase text-fg-muted">Toplam Maliyet</p>
                   <p className="tabular text-[13px] font-semibold">
-                    {formatKurus(phone.total_cost)}
+                    {formatKurusPrivate(phone.total_cost, privacyMode)}
                   </p>
                 </div>
               </div>
@@ -429,7 +501,7 @@ export function PhoneDrawer() {
       <ImeiCopyDialog
         open={imeiOpen}
         onClose={() => setImeiOpen(false)}
-        imei1={phone?.imei1 ?? ""}
+        imei1={phone?.imei1 ?? null}
         imei2={phone?.imei2 ?? null}
       />
       <Dialog

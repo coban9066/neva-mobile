@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 interface WarrantyRow {
   phone_id: number;
   label: string;
-  imei1: string;
+  imei1: string | null;
   warranty_until: string;
 }
 
@@ -42,6 +42,7 @@ export function WarrantyPage() {
              FROM phones p
              LEFT JOIN brands b ON b.id = p.brand_id
              WHERE p.deleted_at IS NULL
+               AND p.status != 'sold'
                AND p.warranty_until IS NOT NULL
                AND date(p.warranty_until) >= date('now','localtime')
                AND date(p.warranty_until) <= date('now','localtime','+30 days')
@@ -52,6 +53,7 @@ export function WarrantyPage() {
              FROM phones p
              LEFT JOIN brands b ON b.id = p.brand_id
              WHERE p.deleted_at IS NULL
+               AND p.status != 'sold'
                AND p.warranty_until IS NOT NULL
                AND date(p.warranty_until) >= date('now','localtime')
              ORDER BY p.warranty_until ASC`
@@ -114,7 +116,7 @@ export function WarrantyPage() {
                   >
                     <td className="px-4 py-2.5 font-medium">{r.label}</td>
                     <td className="tabular px-2 py-2.5 font-mono text-xs text-fg-muted">
-                      {r.imei1}
+                      {r.imei1 ?? "—"}
                     </td>
                     <td className="px-2 py-2.5">
                       <span

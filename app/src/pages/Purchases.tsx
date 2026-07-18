@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDownToLine, Trash2 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { select } from "@/lib/db";
-import { formatKurus } from "@/lib/money";
+import { formatKurus, formatKurusPrivate } from "@/lib/money";
 import { formatDateTime } from "@/lib/utils";
 import { useUi, isReadOnly } from "@/stores/ui";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -16,14 +16,14 @@ interface PurchaseRow {
   date: string;
   phone_id: number;
   label: string;
-  imei1: string;
+  imei1: string | null;
   contact_name: string | null;
   price: number;
   payment_method: PaymentMethod;
 }
 
 export function PurchasesPage() {
-  const { openPhoneDrawer, openQuickPurchase, toast, license } = useUi();
+  const { openPhoneDrawer, openQuickPurchase, toast, license, privacyMode } = useUi();
   const qc = useQueryClient();
 
   const [deleteTarget, setDeleteTarget] = useState<PurchaseRow | null>(null);
@@ -73,7 +73,8 @@ export function PurchasesPage() {
       <div className="flex items-center gap-3 border-b border-border bg-surface px-4 py-2.5">
         <h1 className="text-sm font-semibold">Alışlar</h1>
         <span className="text-xs text-fg-muted">
-          {rows.length} işlem · toplam <b className="tabular text-fg">{formatKurus(total)}</b>
+          {rows.length} işlem · toplam{" "}
+          <b className="tabular text-fg">{formatKurusPrivate(total, privacyMode)}</b>
         </span>
       </div>
 
@@ -108,12 +109,12 @@ export function PurchasesPage() {
                   <td className="px-4 py-2 text-fg-muted">{formatDateTime(r.date)}</td>
                   <td className="px-2 py-2 font-medium">{r.label}</td>
                   <td className="px-2 py-2 font-mono text-xs text-fg-muted">
-                    …{r.imei1.slice(-6)}
+                    {r.imei1 ? `…${r.imei1.slice(-6)}` : "—"}
                   </td>
                   <td className="px-2 py-2">{r.contact_name ?? "—"}</td>
                   <td className="px-2 py-2 text-fg-muted">{PAYMENT_LABELS[r.payment_method]}</td>
                   <td className="tabular px-4 py-2 text-right font-medium">
-                    {formatKurus(r.price)}
+                    {formatKurusPrivate(r.price, privacyMode)}
                   </td>
                   <td className="px-4 py-2 text-center">
                     <button
@@ -165,7 +166,7 @@ export function PurchasesPage() {
               <span className="text-fg-muted">Telefon:</span> <b>{deleteTarget.label}</b>
             </p>
             <p>
-              <span className="text-fg-muted">IMEI:</span> <code className="font-mono text-primary">{deleteTarget.imei1}</code>
+              <span className="text-fg-muted">IMEI:</span> <code className="font-mono text-primary">{deleteTarget.imei1 ?? "—"}</code>
             </p>
             <p>
               <span className="text-fg-muted">Tutar:</span> <b className="font-mono">{formatKurus(deleteTarget.price)}</b>

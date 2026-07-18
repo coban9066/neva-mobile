@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Smartphone, Search, MessageCircle, IdCard } from "lucide-react";
+import { Smartphone, Search, Tag, MessageCircle, IdCard } from "lucide-react";
 import { select } from "@/lib/db";
 import { useUi } from "@/stores/ui";
 import { cn } from "@/lib/utils";
-import { formatKurus } from "@/lib/money";
+import { formatKurusPrivate } from "@/lib/money";
 import { StatusBadge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -25,7 +25,8 @@ const TABS: { key: PhoneStatus | "all"; label: string }[] = [
 export function PhonesPage() {
   const [tab, setTab] = useState<PhoneStatus | "all">("in_stock");
   const [search, setSearch] = useState("");
-  const { openPhoneDrawer, openQuickPurchase } = useUi();
+  const [tagSearch, setTagSearch] = useState("");
+  const { openPhoneDrawer, openQuickPurchase, privacyMode } = useUi();
   const [shareTarget, setShareTarget] = useState<PhoneRow | null>(null);
   const [imeiTarget, setImeiTarget] = useState<PhoneRow | null>(null);
 
@@ -42,7 +43,7 @@ export function PhonesPage() {
       : (counts.find((c) => c.status === k)?.n ?? 0);
 
   const { data: phones = [], isLoading } = useQuery({
-    queryKey: ["phones", tab, search],
+    queryKey: ["phones", tab, search, tagSearch],
     queryFn: () =>
       select<PhoneRow>(
         `SELECT p.id, p.imei1, p.imei2, b.name AS brand_name, p.model AS model_name,
@@ -56,8 +57,9 @@ export function PhonesPage() {
            AND p.status != 'sold'
            AND ($1 = 'all' OR p.status = $1)
            AND ($2 = '' OR p.imei1 LIKE $3 OR (b.name || ' ' || p.model) LIKE $3 OR p.color LIKE $3)
+           AND ($4 = '' OR p.etiket_numarasi LIKE $5)
          ORDER BY p.id DESC LIMIT 500`,
-        [tab, search.trim(), `%${search.trim()}%`]
+        [tab, search.trim(), `%${search.trim()}%`, tagSearch.trim(), `%${tagSearch.trim()}%`]
       ),
   });
 
@@ -71,6 +73,15 @@ export function PhonesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Bu listede ara…"
+            className="h-7 pl-7 text-xs"
+          />
+        </div>
+        <div className="relative w-48">
+          <Tag size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted" />
+          <Input
+            value={tagSearch}
+            onChange={(e) => setTagSearch(e.target.value)}
+            placeholder="Etiket No ile Ara…"
             className="h-7 pl-7 text-xs"
           />
         </div>
@@ -152,8 +163,14 @@ export function PhonesPage() {
                     {p.region && <RegionBadge region={p.region} className="ml-1.5" />}
                   </td>
                   <td className="px-2 py-2 font-mono text-xs">
-                    <span className="text-fg-muted">{p.imei1.slice(0, 9)}</span>
-                    <span className="font-semibold">{p.imei1.slice(9)}</span>
+                    {p.imei1 ? (
+                      <>
+                        <span className="text-fg-muted">{p.imei1.slice(0, 9)}</span>
+                        <span className="font-semibold">{p.imei1.slice(9)}</span>
+                      </>
+                    ) : (
+                      <span className="text-fg-muted">—</span>
+                    )}
                   </td>
                   <td className="px-2 py-2 font-mono text-xs">{p.etiket_numarasi ?? "—"}</td>
                   <td className="px-2 py-2">{p.cosmetic_grade ?? "—"}</td>
@@ -172,7 +189,9 @@ export function PhonesPage() {
                       "—"
                     )}
                   </td>
-                  <td className="tabular px-4 py-2 text-right">{formatKurus(p.total_cost)}</td>
+                  <td className="tabular px-4 py-2 text-right">
+                    {formatKurusPrivate(p.total_cost, privacyMode)}
+                  </td>
                   <td className="px-4 py-2">
                     <div className="flex items-center justify-center gap-1">
                       <button
@@ -212,7 +231,7 @@ export function PhonesPage() {
       <ImeiCopyDialog
         open={imeiTarget !== null}
         onClose={() => setImeiTarget(null)}
-        imei1={imeiTarget?.imei1 ?? ""}
+        imei1={imeiTarget?.imei1 ?? null}
         imei2={imeiTarget?.imei2 ?? null}
       />
     </div>

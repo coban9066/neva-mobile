@@ -11,9 +11,13 @@ import {
   Award,
   Coins,
   HandCoins,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { selectOne, select } from "@/lib/db";
-import { formatKurus } from "@/lib/money";
+import { formatKurusPrivate } from "@/lib/money";
+import { cn } from "@/lib/utils";
+import { useUi } from "@/stores/ui";
 import { DashboardCard, type CardTone } from "@/components/dashboard/DashboardCard";
 import { QuickProfitCalculator } from "@/components/dashboard/QuickProfitCalculator";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
@@ -46,6 +50,7 @@ function profitTone(v: number | null | undefined): CardTone {
 /** Operasyon ekranı: yalnız gerçekleşmiş veriler — tahmini/yanıltıcı metrik yok. */
 export function DashboardPage() {
   const navigate = useNavigate();
+  const { privacyMode, togglePrivacyMode } = useUi();
 
   const { data: kpis } = useQuery({
     queryKey: ["dashboard-kpis"],
@@ -61,13 +66,13 @@ export function DashboardPage() {
              FROM till_entries WHERE method = 'cash') AS cash_balance,
           (SELECT COUNT(*) FROM phones WHERE deleted_at IS NULL) AS total_phones,
           (SELECT COUNT(*) FROM phones
-             WHERE deleted_at IS NULL AND warranty_until IS NOT NULL
+             WHERE deleted_at IS NULL AND status != 'sold' AND warranty_until IS NOT NULL
                AND date(warranty_until) >= date('now','localtime')) AS pending_warranty,
           (SELECT SUM(net_profit) FROM v_phone_profit
              WHERE date(sale_date) = date('now','localtime')) AS today_profit,
           (SELECT total_value FROM v_stock_value) AS stock_value,
           (SELECT COUNT(*) FROM phones
-             WHERE deleted_at IS NULL AND warranty_until IS NOT NULL
+             WHERE deleted_at IS NULL AND status != 'sold' AND warranty_until IS NOT NULL
                AND date(warranty_until) >= date('now','localtime')
                AND date(warranty_until) <= date('now','localtime','+30 days')) AS warranty_soon,
           (SELECT SUM(price - amount_paid) FROM sales
@@ -93,28 +98,28 @@ export function DashboardPage() {
     {
       icon: Coins,
       label: "Bugünkü Kâr",
-      value: formatKurus(kpis?.today_profit ?? 0),
+      value: formatKurusPrivate(kpis?.today_profit ?? 0, privacyMode),
       tone: profitTone(kpis?.today_profit),
       to: "/kasa",
     },
     {
       icon: ArrowUpFromLine,
       label: "Bugünkü Satış",
-      value: formatKurus(kpis?.today_sales_total ?? 0),
+      value: formatKurusPrivate(kpis?.today_sales_total ?? 0, privacyMode),
       unit: `${kpis?.today_sales_count ?? 0} adet`,
       to: "/satislar",
     },
     {
       icon: PiggyBank,
       label: "Bu Ay Net Kar",
-      value: formatKurus(kpis?.month_profit ?? 0),
+      value: formatKurusPrivate(kpis?.month_profit ?? 0, privacyMode),
       tone: profitTone(kpis?.month_profit),
       to: "/kasa",
     },
     {
       icon: Wallet,
       label: "Kasadaki Nakit",
-      value: formatKurus(kpis?.cash_balance ?? 0),
+      value: formatKurusPrivate(kpis?.cash_balance ?? 0, privacyMode),
       to: "/kasa",
     },
     {
@@ -130,7 +135,7 @@ export function DashboardPage() {
     {
       icon: Layers,
       label: "Toplam Stok Değeri",
-      value: formatKurus(kpis?.stock_value ?? 0),
+      value: formatKurusPrivate(kpis?.stock_value ?? 0, privacyMode),
       to: "/telefonlar",
     },
     {
@@ -160,13 +165,13 @@ export function DashboardPage() {
       icon: Award,
       label: "En Kârlı Marka",
       value: topProfitBrand?.brand ?? "—",
-      unit: topProfitBrand ? formatKurus(topProfitBrand.profit) : undefined,
+      unit: topProfitBrand ? formatKurusPrivate(topProfitBrand.profit, privacyMode) : undefined,
       to: "/satislar",
     },
     {
       icon: HandCoins,
       label: "Bekleyen Tahsilat",
-      value: formatKurus(kpis?.pending_collection ?? 0),
+      value: formatKurusPrivate(kpis?.pending_collection ?? 0, privacyMode),
       tone: (kpis?.pending_collection ?? 0) > 0 ? ("warning" as CardTone) : "default",
       to: "/bekleyen-odemeler",
     },
@@ -175,6 +180,22 @@ export function DashboardPage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-[1680px] space-y-4 p-5">
+        <div className="flex items-center justify-end">
+          <button
+            onClick={togglePrivacyMode}
+            aria-pressed={privacyMode}
+            className={cn(
+              "flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
+              privacyMode
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border-strong text-fg-muted hover:bg-surface-2 hover:text-fg"
+            )}
+            title={privacyMode ? "Gizlilik Modunu kapat" : "Gizlilik Modunu aç"}
+          >
+            {privacyMode ? <EyeOff size={13} /> : <Eye size={13} />} Gizlilik
+          </button>
+        </div>
+
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
           {primaryCards.map((c, i) => (
             <DashboardCard
@@ -205,11 +226,11 @@ export function DashboardPage() {
           ))}
         </div>
 
-        <DashboardCharts />
+        <DashboardCharts hideMoney={privacyMode} />
 
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
           <QuickProfitCalculator />
-          <RecentActivity />
+          <RecentActivity hideMoney={privacyMode} />
         </div>
       </div>
     </div>

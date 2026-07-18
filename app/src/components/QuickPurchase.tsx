@@ -185,7 +185,7 @@ export function QuickPurchase() {
   const alreadyInStock =
     existing && ["in_stock", "reserved", "consigned"].includes(existing.status);
   const canSave =
-    imeiState === "valid" &&
+    (imeiState === "valid" || imeiState === "empty") &&
     brandId !== "" &&
     model.trim() !== "" &&
     grade !== null &&
@@ -203,7 +203,7 @@ export function QuickPurchase() {
       // Atomik yazma Rust tarafında (save_purchase) — tek SQL transaction
       const phoneId = await invoke<number>("save_purchase", {
         args: {
-          imei,
+          imei: imei || null,
           brandId,
           model: model.trim(),
           color: color || null,
@@ -227,11 +227,12 @@ export function QuickPurchase() {
 
       qc.invalidateQueries();
       closeQuickPurchase();
+      const imeiSuffix = imei ? ` (…${imei.slice(-6)})` : "";
       toast({
         kind: "success",
         title: existing
-          ? `Yeniden alış kaydedildi — tur #yeni (…${imei.slice(-6)})`
-          : `Alış kaydedildi (…${imei.slice(-6)})`,
+          ? `Yeniden alış kaydedildi — tur #yeni${imeiSuffix}`
+          : `Alış kaydedildi${imeiSuffix}`,
         actions: [{ label: "Kartı Aç", onClick: () => openPhoneDrawer(phoneId) }],
       });
     } catch (e) {
@@ -277,6 +278,7 @@ export function QuickPurchase() {
         <Field
           label="IMEI"
           className="col-span-2"
+          hint={imeiState === "empty" ? "Opsiyonel — sonradan Telefon Düzenle'den eklenebilir" : undefined}
           error={imeiState === "invalid" ? "Geçersiz IMEI (15 hane + Luhn)" : null}
         >
           <div className="relative">
@@ -284,7 +286,7 @@ export function QuickPurchase() {
               ref={imeiRef}
               value={imei}
               onChange={(e) => setImei(e.target.value.replace(/\D/g, "").slice(0, 15))}
-              placeholder="15 haneli IMEI — okuyucuyla tarayabilirsiniz"
+              placeholder="15 haneli IMEI — boş bırakılabilir"
               className={cn(
                 "pr-8 font-mono",
                 imeiState === "valid" && "border-success",

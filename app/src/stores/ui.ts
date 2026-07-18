@@ -11,6 +11,8 @@ export interface Toast {
 interface UiState {
   theme: "light" | "dark";
   sidebarCollapsed: boolean;
+  /** Dashboard/liste ekranlarındaki parasal değerleri "********" ile maskeler; localStorage'da kalıcıdır. */
+  privacyMode: boolean;
   commandOpen: boolean;
   quickPurchaseOpen: boolean;
   /** Hızlı Alış'a önceden doldurulacak IMEI (barkod/komut paletinden) */
@@ -21,6 +23,7 @@ interface UiState {
 
   setTheme: (t: "light" | "dark") => void;
   toggleSidebar: () => void;
+  togglePrivacyMode: () => void;
   setCommandOpen: (v: boolean) => void;
   openQuickPurchase: (imei?: string) => void;
   closeQuickPurchase: () => void;
@@ -41,6 +44,7 @@ let toastSeq = 1;
 export const useUi = create<UiState>((set) => ({
   theme: (localStorage.getItem("theme") as "light" | "dark") || "light",
   sidebarCollapsed: localStorage.getItem("sidebarCollapsed") === "1",
+  privacyMode: localStorage.getItem("privacyMode") === "1",
   commandOpen: false,
   quickPurchaseOpen: false,
   quickPurchaseImei: null,
@@ -57,6 +61,11 @@ export const useUi = create<UiState>((set) => ({
     set((s) => {
       localStorage.setItem("sidebarCollapsed", s.sidebarCollapsed ? "0" : "1");
       return { sidebarCollapsed: !s.sidebarCollapsed };
+    }),
+  togglePrivacyMode: () =>
+    set((s) => {
+      localStorage.setItem("privacyMode", s.privacyMode ? "0" : "1");
+      return { privacyMode: !s.privacyMode };
     }),
   setCommandOpen: (commandOpen) => set({ commandOpen }),
   openQuickPurchase: (imei) =>
