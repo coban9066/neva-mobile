@@ -12,6 +12,7 @@ const NAV_KEYS: Record<string, string> = {
   "6": "/kasa",
   "7": "/ayarlar",
   "8": "/veri-yonetimi",
+  "9": "/bekleyen-odemeler",
 };
 
 /**

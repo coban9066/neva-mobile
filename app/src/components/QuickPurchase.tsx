@@ -32,6 +32,7 @@ interface ExistingPhone {
   last_sale_price: number | null;
   last_sale_date: string | null;
   battery_health: number | null;
+  etiket_numarasi: string | null;
 }
 
 interface ModelStats {
@@ -46,6 +47,7 @@ export function QuickPurchase() {
   const qc = useQueryClient();
 
   const [imei, setImei] = useState("");
+  const [etiketNumarasi, setEtiketNumarasi] = useState("");
   const [brandId, setBrandId] = useState<number | "">("");
   const [model, setModel] = useState("");
   const [storage, setStorage] = useState<number | "">("");
@@ -69,6 +71,7 @@ export function QuickPurchase() {
   useEffect(() => {
     if (quickPurchaseOpen) {
       setImei(quickPurchaseImei ?? "");
+      setEtiketNumarasi("");
       setBrandId("");
       setModel("");
       setStorage("");
@@ -121,7 +124,7 @@ export function QuickPurchase() {
     enabled: imeiState === "valid" && quickPurchaseOpen,
     queryFn: () =>
       selectOne<ExistingPhone>(
-        `SELECT p.id, p.status, p.brand_id, p.model, p.color, p.storage_gb, p.cosmetic_grade, p.region, p.battery_health,
+        `SELECT p.id, p.status, p.brand_id, p.model, p.color, p.storage_gb, p.cosmetic_grade, p.region, p.battery_health, p.etiket_numarasi,
                 (SELECT price FROM sales s WHERE s.phone_id = p.id AND s.deleted_at IS NULL ORDER BY s.date DESC LIMIT 1) AS last_sale_price,
                 (SELECT date  FROM sales s WHERE s.phone_id = p.id AND s.deleted_at IS NULL ORDER BY s.date DESC LIMIT 1) AS last_sale_date
          FROM phones p WHERE (p.imei1 = $1 OR p.imei2 = $1) AND p.deleted_at IS NULL`,
@@ -139,6 +142,7 @@ export function QuickPurchase() {
       if (existing.cosmetic_grade) setGrade(existing.cosmetic_grade);
       if (existing.region) setRegion(existing.region);
       if (existing.battery_health) setBatteryRaw(String(existing.battery_health));
+      if (existing.etiket_numarasi) setEtiketNumarasi(existing.etiket_numarasi);
     }
   }, [existing]);
 
@@ -208,6 +212,7 @@ export function QuickPurchase() {
           batteryHealth: battery,
           region,
           notes: note.trim() || null,
+          etiketNumarasi: etiketNumarasi.trim() || null,
           warrantyUntil: warrantySpan ? warrantyEndDate(warrantySpan) : null,
           checks: profile.checks.map((c) => ({ key: c.key, value: !!checks[c.key] })),
           contactId,
@@ -293,6 +298,14 @@ export function QuickPurchase() {
               />
             )}
           </div>
+        </Field>
+
+        <Field label="Etiket Numarası" className="col-span-2" hint="Opsiyonel — dükkândaki fiziksel etiket/raf numarası">
+          <Input
+            value={etiketNumarasi}
+            onChange={(e) => setEtiketNumarasi(e.target.value)}
+            placeholder="Örn: A-154, R12, 2026-001"
+          />
         </Field>
 
         {existing && (

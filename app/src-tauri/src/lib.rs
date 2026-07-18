@@ -23,6 +23,8 @@ const MIGRATIONS_RAW: &[(i64, &str, &str)] = &[
     (11, "contact_phone", include_str!("../migrations/011_contact_phone.sql")),
     (12, "hotfix", include_str!("../migrations/012_hotfix.sql")),
     (13, "pos_commission", include_str!("../migrations/013_pos_commission.sql")),
+    (14, "etiket_numarasi", include_str!("../migrations/014_etiket_numarasi.sql")),
+    (15, "partial_payment", include_str!("../migrations/015_partial_payment.sql")),
 ];
 
 async fn sqlite_pool(
@@ -71,6 +73,8 @@ pub struct PurchaseArgs {
     battery_health: Option<i64>,
     region: String,
     notes: Option<String>,
+    /// Fiziksel etiket/raf numarası (ör. "A-154") — opsiyonel, benzersiz olmalı
+    etiket_numarasi: Option<String>,
     /// Üretici garantisi bitiş tarihi (YYYY-MM-DD); yoksa None
     warranty_until: Option<String>,
     #[serde(default)]
@@ -123,6 +127,11 @@ async fn save_purchase(
             return Err("Geçersiz garanti bitiş tarihi.".into());
         }
     }
+    let etiket_numarasi = args
+        .etiket_numarasi
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
 
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -134,6 +143,21 @@ async fn save_purchase(
     .await
     .map_err(|e| e.to_string())?;
 
+    if let Some(tag) = etiket_numarasi {
+        let clash: Option<(i64,)> = sqlx::query_as(
+            "SELECT id FROM phones WHERE etiket_numarasi = ?1 COLLATE NOCASE
+             AND id IS NOT ?2",
+        )
+        .bind(tag)
+        .bind(existing.as_ref().map(|(id, _)| *id))
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+        if clash.is_some() {
+            return Err(format!("Etiket numarası \"{tag}\" başka bir telefonda kullanılıyor."));
+        }
+    }
+
     let phone_id = match existing {
         Some((id, status)) => {
             if matches!(status.as_str(), "in_stock" | "reserved" | "consigned") {
@@ -144,7 +168,7 @@ async fn save_purchase(
                  model=?2, color=COALESCE(?3, color), storage_gb=COALESCE(?4, storage_gb),
                  cosmetic_grade=?5, battery_health=COALESCE(?6, battery_health),
                  region=?7, notes=COALESCE(?8, notes),
-                 warranty_until=?9,
+                 warranty_until=?9, etiket_numarasi=?10,
                  updated_at=datetime('now','localtime') WHERE id=?1",
             )
             .bind(id)
@@ -156,6 +180,7 @@ async fn save_purchase(
             .bind(&args.region)
             .bind(&args.notes)
             .bind(&args.warranty_until)
+            .bind(etiket_numarasi)
             .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
@@ -164,8 +189,8 @@ async fn save_purchase(
         None => sqlx::query(
             "INSERT INTO phones (imei1, brand_id, model, color, storage_gb,
                                  cosmetic_grade, battery_health, region, notes,
-                                 warranty_until, status, ownership)
-             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,'in_stock','stock')",
+                                 warranty_until, etiket_numarasi, status, ownership)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,'in_stock','stock')",
         )
         .bind(&args.imei)
         .bind(args.brand_id)
@@ -177,6 +202,7 @@ async fn save_purchase(
         .bind(&args.region)
         .bind(&args.notes)
         .bind(&args.warranty_until)
+        .bind(etiket_numarasi)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?
@@ -296,6 +322,9 @@ async fn save_purchase(
 pub struct SaleArgs {
     phone_id: i64,
     price: i64,
+    /// Şu an alınan tutar (kuruş). price'tan az olabilir — kalan alacak
+    /// "Bekleyen Ödemeler"e düşer. price'a eşitse satış tam ödenmiş sayılır.
+    amount_paid: i64,
     /// sales CHECK'ine uyan değer (cash/pos/transfer); UI "Kredi Kartı"nı pos'a eşler
     payment_method: String,
     payment_label: String,
@@ -319,6 +348,13 @@ async fn save_sale(instances: State<'_, DbInstances>, args: SaleArgs) -> Result<
     }
     if !matches!(args.payment_method.as_str(), "cash" | "pos" | "transfer") {
         return Err("Geçersiz ödeme türü.".into());
+    }
+    if args.amount_paid <= 0 || args.amount_paid > args.price {
+        return Err("Alınan ödeme sıfırdan büyük ve satış tutarını aşmamalıdır.".into());
+    }
+    // POS terminali her zaman tam tutarı işler; kısmi ödeme yalnızca nakit/havalede mümkündür.
+    if args.payment_method == "pos" && args.amount_paid != args.price {
+        return Err("POS ödemesinde tutar satış fiyatına eşit olmalıdır.".into());
     }
 
     // Komisyon yalnızca POS'ta ve sunucu tarafında yeniden hesaplanır; istemci
@@ -382,8 +418,8 @@ async fn save_sale(instances: State<'_, DbInstances>, args: SaleArgs) -> Result<
     };
 
     let sale_id = sqlx::query(
-        "INSERT INTO sales (phone_id, acquisition_id, contact_id, contact_name, contact_phone, price, payment_method, notes, commission_type, commission_value, commission_amount)
-         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)",
+        "INSERT INTO sales (phone_id, acquisition_id, contact_id, contact_name, contact_phone, price, amount_paid, payment_method, notes, commission_type, commission_value, commission_amount)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)",
     )
     .bind(args.phone_id)
     .bind(acq_id)
@@ -391,6 +427,7 @@ async fn save_sale(instances: State<'_, DbInstances>, args: SaleArgs) -> Result<
     .bind(customer_name)
     .bind(customer_phone)
     .bind(args.price)
+    .bind(args.amount_paid)
     .bind(&args.payment_method)
     .bind(&args.notes)
     .bind(&commission_type)
@@ -424,7 +461,7 @@ async fn save_sale(instances: State<'_, DbInstances>, args: SaleArgs) -> Result<
         )
         .bind(cid)
         .bind(sale_id)
-        .bind(args.price)
+        .bind(args.amount_paid)
         .bind(&args.payment_label)
         .execute(&mut *tx)
         .await
@@ -436,7 +473,7 @@ async fn save_sale(instances: State<'_, DbInstances>, args: SaleArgs) -> Result<
          VALUES ('in',?1,?2,'sale',?3,'Telefon satışı (' || ?4 || ')')",
     )
     .bind(&args.payment_method)
-    .bind(args.price - commission_amount)
+    .bind(args.amount_paid - commission_amount)
     .bind(sale_id)
     .bind(&args.payment_label)
     .execute(&mut *tx)
@@ -476,6 +513,77 @@ async fn delete_sale(instances: State<'_, DbInstances>, sale_id: i64) -> Result<
     license::ensure_writable(&pool).await?;
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
     purge_sale_rows(&mut tx, sale_id).await?;
+    tx.commit().await.map_err(|e| e.to_string())
+}
+
+/// Bekleyen Ödemeler ekranından kısmi tahsilat alır: sales.amount_paid'i artırır,
+/// kasaya nakit girişi ve (varsa) cari tahsilat kaydı işler. Kalan alacak
+/// price - amount_paid ile türetildiğinden ayrı bir "tamamlandı" bayrağı gerekmez —
+/// amount_paid price'a ulaştığı an kayıt Bekleyen Ödemeler sorgusundan kendiliğinden düşer.
+#[tauri::command]
+async fn record_payment(
+    instances: State<'_, DbInstances>,
+    sale_id: i64,
+    amount: i64,
+) -> Result<(), String> {
+    let pool = sqlite_pool(&instances).await?;
+    license::ensure_writable(&pool).await?;
+
+    if amount <= 0 {
+        return Err("Ödeme tutarı sıfırdan büyük olmalıdır.".into());
+    }
+
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+    let row: Option<(i64, i64, Option<i64>)> = sqlx::query_as(
+        "SELECT price, amount_paid, contact_id FROM sales WHERE id=?1 AND deleted_at IS NULL",
+    )
+    .bind(sale_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let (price, amount_paid, contact_id) = row.ok_or("Satış bulunamadı.")?;
+    let remaining = price - amount_paid;
+    if remaining <= 0 {
+        return Err("Bu satışın bekleyen bir alacağı yok.".into());
+    }
+    if amount > remaining {
+        return Err("Ödeme tutarı kalan alacaktan fazla olamaz.".into());
+    }
+
+    sqlx::query(
+        "UPDATE sales SET amount_paid = amount_paid + ?2 WHERE id=?1",
+    )
+    .bind(sale_id)
+    .bind(amount)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    sqlx::query(
+        "INSERT INTO till_entries (direction, method, amount, ref_type, ref_id, note)
+         VALUES ('in','cash',?1,'sale',?2,'Bekleyen tahsilat')",
+    )
+    .bind(amount)
+    .bind(sale_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    if let Some(cid) = contact_id {
+        sqlx::query(
+            "INSERT INTO ledger_entries (contact_id, ref_type, ref_id, debit, credit, note)
+             VALUES (?1,'payment',?2,0,?3,'Bekleyen tahsilat')",
+        )
+        .bind(cid)
+        .bind(sale_id)
+        .bind(amount)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+    }
+
     tx.commit().await.map_err(|e| e.to_string())
 }
 
@@ -848,6 +956,50 @@ async fn update_phone_quality(
     tx.commit().await.map_err(|e| e.to_string())
 }
 
+/// Telefon detayından etiket numarasını sonradan düzenler/siler (None → temizler).
+/// Benzersizlik server tarafında yeniden doğrulanır (istemci tutarı güvenilmez).
+#[tauri::command]
+async fn update_phone_tag(
+    instances: State<'_, DbInstances>,
+    phone_id: i64,
+    etiket_numarasi: Option<String>,
+) -> Result<(), String> {
+    let pool = sqlite_pool(&instances).await?;
+    license::ensure_writable(&pool).await?;
+
+    let tag = etiket_numarasi
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+    if let Some(tag) = tag {
+        let clash: Option<(i64,)> = sqlx::query_as(
+            "SELECT id FROM phones WHERE etiket_numarasi = ?1 COLLATE NOCASE AND id IS NOT ?2",
+        )
+        .bind(tag)
+        .bind(phone_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+        if clash.is_some() {
+            return Err(format!("Etiket numarası \"{tag}\" başka bir telefonda kullanılıyor."));
+        }
+    }
+
+    sqlx::query(
+        "UPDATE phones SET etiket_numarasi=?2, updated_at=datetime('now','localtime') WHERE id=?1",
+    )
+    .bind(phone_id)
+    .bind(tag)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    tx.commit().await.map_err(|e| e.to_string())
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContactInfoArgs {
@@ -1017,6 +1169,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             save_purchase,
             save_sale,
+            record_payment,
             delete_sale,
             delete_purchase,
             purge_records,
@@ -1025,6 +1178,7 @@ pub fn run() {
             backup_database,
             restore_database,
             update_phone_quality,
+            update_phone_tag,
             update_contact_info,
             write_binary_file
         ])

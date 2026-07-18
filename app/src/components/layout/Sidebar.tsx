@@ -6,6 +6,7 @@ import {
   ArrowUpFromLine,
   ShieldCheck,
   Wallet,
+  HandCoins,
   Settings,
   Database,
 } from "lucide-react";
@@ -19,6 +20,7 @@ const NAV = [
   { to: "/alislar", label: "Alışlar", icon: ArrowDownToLine, key: "3" },
   { to: "/satislar", label: "Satışlar", icon: ArrowUpFromLine, key: "4" },
   { to: "/garanti", label: "Garanti", icon: ShieldCheck, key: "5" },
+  { to: "/bekleyen-odemeler", label: "Bekleyen Ödemeler", icon: HandCoins, key: "9" },
   { to: "/kasa", label: "Kasa", icon: Wallet, key: "6" },
   { to: "/ayarlar", label: "Ayarlar", icon: Settings, key: "7" },
   { to: "/veri-yonetimi", label: "Veri Yönetimi", icon: Database, key: "8" },

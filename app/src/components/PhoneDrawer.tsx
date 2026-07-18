@@ -15,6 +15,9 @@ import {
   MessageCircle,
   IdCard,
   Trash2,
+  Pencil,
+  Check,
+  Tag,
 } from "lucide-react";
 import { selectOne, select } from "@/lib/db";
 import { useUi, isReadOnly } from "@/stores/ui";
@@ -58,6 +61,7 @@ interface PhoneDetail {
   total_cost: number | null;
   purchase_price: number | null;
   current_acquisition_id: number | null;
+  etiket_numarasi: string | null;
 }
 
 const EVENT_ICONS: Record<TimelineEvent["event_type"], typeof Receipt> = {
@@ -89,6 +93,9 @@ export function PhoneDrawer() {
   const [imeiOpen, setImeiOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [tagEditing, setTagEditing] = useState(false);
+  const [tagValue, setTagValue] = useState("");
+  const [tagSaving, setTagSaving] = useState(false);
   const open = phoneDrawerId !== null;
   const readOnly = isReadOnly(license);
 
@@ -97,6 +104,7 @@ export function PhoneDrawer() {
     setShareOpen(false);
     setImeiOpen(false);
     setDeleteOpen(false);
+    setTagEditing(false);
   }, [open, phoneDrawerId]);
 
   useEffect(() => {
@@ -137,6 +145,25 @@ export function PhoneDrawer() {
     if (!phone) return;
     closePhoneDrawer();
     navigate("/satislar", { state: { mode: "checkout", phoneId: phone.id } });
+  }
+
+  async function saveTag() {
+    if (!phone || tagSaving) return;
+    setTagSaving(true);
+    try {
+      await invoke("update_phone_tag", {
+        phoneId: phone.id,
+        etiketNumarasi: tagValue.trim() || null,
+      });
+      await qc.invalidateQueries({ queryKey: ["phone-detail", phone.id] });
+      await qc.invalidateQueries({ queryKey: ["phones"] });
+      setTagEditing(false);
+      toast({ kind: "success", title: "Etiket numarası güncellendi" });
+    } catch (e) {
+      toast({ kind: "error", title: `Kaydedilemedi: ${String(e)}` });
+    } finally {
+      setTagSaving(false);
+    }
   }
 
   async function handleDelete() {
@@ -184,6 +211,58 @@ export function PhoneDrawer() {
                   >
                     {phone.imei1} <Copy size={11} />
                   </button>
+
+                  {!tagEditing ? (
+                    <div className="mt-1 flex items-center gap-1">
+                      <Tag size={11} className="text-fg-muted" />
+                      {phone.etiket_numarasi ? (
+                        <span className="font-mono text-xs">{phone.etiket_numarasi}</span>
+                      ) : (
+                        <span className="text-xs text-fg-muted">Etiket yok</span>
+                      )}
+                      {!readOnly && (
+                        <button
+                          onClick={() => {
+                            setTagValue(phone.etiket_numarasi ?? "");
+                            setTagEditing(true);
+                          }}
+                          className="cursor-pointer rounded p-0.5 text-fg-muted hover:bg-surface-2 hover:text-fg"
+                          title="Etiket numarasını düzenle"
+                        >
+                          <Pencil size={10} />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mt-1 flex items-center gap-1">
+                      <input
+                        autoFocus
+                        value={tagValue}
+                        onChange={(e) => setTagValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void saveTag();
+                          if (e.key === "Escape") setTagEditing(false);
+                        }}
+                        placeholder="Örn: A-154"
+                        className="h-6 w-28 rounded border border-border-strong bg-surface px-1.5 font-mono text-xs focus:border-primary focus:outline-none"
+                      />
+                      <button
+                        onClick={saveTag}
+                        disabled={tagSaving}
+                        className="cursor-pointer rounded p-0.5 text-success hover:bg-success/10 disabled:opacity-50"
+                        title="Kaydet"
+                      >
+                        <Check size={12} />
+                      </button>
+                      <button
+                        onClick={() => setTagEditing(false)}
+                        className="cursor-pointer rounded p-0.5 text-fg-muted hover:bg-surface-2"
+                        title="Vazgeç"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {phone.region && <RegionBadge region={phone.region} />}
