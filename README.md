@@ -50,7 +50,7 @@ Excel'de ayrı bir sayfa alış için, ayrı bir sayfa satış için. Defterde d
 **📥 Alış & Satış**
 - Telefon Alış Yönetimi
 - Telefon Satış Yönetimi
-- IMEI Yönetimi
+- IMEI Yönetimi (opsiyonel — sonradan eklenebilir)
 - 🏷️ Etiket Numarası ile Hızlı Arama
 - Kâr Hesaplama
 - 💬 WhatsApp'ta Paylaş
@@ -74,6 +74,7 @@ Excel'de ayrı bir sayfa alış için, ayrı bir sayfa satış için. Defterde d
 - SQLite Veritabanı
 - Tamamen Offline
 - Cihaza Özel Lisans
+- 🙈 Gizlilik Modu (parasal verileri tek tuşla gizle)
 
 </td>
 </tr>

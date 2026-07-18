@@ -12,7 +12,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { select } from "@/lib/db";
-import { formatKurus } from "@/lib/money";
+import { formatKurusPrivate } from "@/lib/money";
 import { cn, formatDateTime } from "@/lib/utils";
 import { useUi } from "@/stores/ui";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -44,7 +44,7 @@ const COLLAPSED_COUNT = 6;
 const EXPANDED_COUNT = 40;
 
 /** Sağ panel: ikonlu işlem timeline'ı — saat, işlem, tutar. */
-export function RecentActivity() {
+export function RecentActivity({ hideMoney = false }: { hideMoney?: boolean }) {
   const { openPhoneDrawer } = useUi();
   const [expanded, setExpanded] = useState(false);
 
@@ -111,7 +111,7 @@ export function RecentActivity() {
                   </span>
                   {ev.amount > 0 && (
                     <span className="tabular shrink-0 font-mono text-xs font-medium">
-                      {formatKurus(ev.amount)}
+                      {formatKurusPrivate(ev.amount, hideMoney)}
                     </span>
                   )}
                 </button>

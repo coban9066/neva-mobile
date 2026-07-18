@@ -38,7 +38,7 @@ export function PhoneCard({
               {phone.storage_gb ? `${phone.storage_gb}GB` : ""} {phone.color ?? ""}
             </span>
           </p>
-          <p className="tabular mt-0.5 font-mono text-[11px] text-fg-muted">{phone.imei1}</p>
+          <p className="tabular mt-0.5 font-mono text-[11px] text-fg-muted">{phone.imei1 ?? "IMEI yok"}</p>
         </div>
         {phone.region && <RegionBadge region={phone.region} />}
       </div>

@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpFromLine, Search, Plus, Trash2, FileText } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { select } from "@/lib/db";
-import { formatKurus, parseLiraInput } from "@/lib/money";
+import { formatKurus, formatKurusPrivate, parseLiraInput } from "@/lib/money";
 import { normalizePhone } from "@/lib/phone-format";
 import { formatDateTime, cn } from "@/lib/utils";
 import { useUi, isReadOnly } from "@/stores/ui";
@@ -37,7 +37,7 @@ interface SaleRow {
   date: string;
   phone_id: number;
   label: string;
-  imei1: string;
+  imei1: string | null;
   customer_name: string | null;
   payment_method: string;
   price: number;
@@ -49,7 +49,7 @@ interface SaleRow {
 }
 
 export function SalesPage() {
-  const { openPhoneDrawer, toast, license } = useUi();
+  const { openPhoneDrawer, toast, license, privacyMode } = useUi();
   const qc = useQueryClient();
 
   const location = useLocation();
@@ -313,9 +313,10 @@ export function SalesPage() {
           <h1 className="text-sm font-semibold">Satışlar</h1>
           {viewMode === "list" && (
             <span className="text-xs text-fg-muted">
-              {rows.length} işlem · ciro <b className="tabular text-fg">{formatKurus(totalCiro)}</b> · net kar{" "}
+              {rows.length} işlem · ciro{" "}
+              <b className="tabular text-fg">{formatKurusPrivate(totalCiro, privacyMode)}</b> · net kar{" "}
               <b className={cn("tabular", totalProfit >= 0 ? "text-success" : "text-destructive")}>
-                {formatKurus(totalProfit)}
+                {formatKurusPrivate(totalProfit, privacyMode)}
               </b>
             </span>
           )}
@@ -396,7 +397,7 @@ export function SalesPage() {
                       <td className="px-4 py-2 text-fg-muted">{formatDateTime(r.date)}</td>
                       <td className="px-2 py-2 font-medium">{r.label}</td>
                       <td className="px-2 py-2 font-mono text-xs text-fg-muted">
-                        …{r.imei1.slice(-6)}
+                        {r.imei1 ? `…${r.imei1.slice(-6)}` : "—"}
                       </td>
                       <td className="px-2 py-2">{r.customer_name ?? "—"}</td>
                       <td className="px-2 py-2 text-fg-muted">{getPaymentLabel(r.payment_method)}</td>
@@ -413,10 +414,10 @@ export function SalesPage() {
                           r.net_profit >= 0 ? "text-success" : "text-destructive"
                         )}
                       >
-                        {formatKurus(r.net_profit)}
+                        {formatKurusPrivate(r.net_profit, privacyMode)}
                       </td>
                       <td className="tabular px-4 py-2 text-right font-semibold text-fg">
-                        {formatKurus(r.price)}
+                        {formatKurusPrivate(r.price, privacyMode)}
                       </td>
                       <td className="px-4 py-2 text-center">
                         <div className="flex items-center justify-center gap-1">
@@ -634,7 +635,7 @@ export function SalesPage() {
               <span className="text-fg-muted">Telefon:</span> <b>{deleteTarget.label}</b>
             </p>
             <p>
-              <span className="text-fg-muted">IMEI:</span> <code className="font-mono text-primary">{deleteTarget.imei1}</code>
+              <span className="text-fg-muted">IMEI:</span> <code className="font-mono text-primary">{deleteTarget.imei1 ?? "—"}</code>
             </p>
             <p>
               <span className="text-fg-muted">Satış Tutarı:</span> <b className="font-mono">{formatKurus(deleteTarget.price)}</b>

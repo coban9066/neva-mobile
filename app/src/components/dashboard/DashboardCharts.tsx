@@ -11,7 +11,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { select } from "@/lib/db";
-import { formatKurus } from "@/lib/money";
+import { formatKurusPrivate } from "@/lib/money";
 
 interface MonthlyRow {
   ym: string;
@@ -56,18 +56,21 @@ function lastNMonths(rows: MonthlyRow[]) {
   return full.slice(Math.max(0, start));
 }
 
-function ChartTooltip({ active, payload, label }: any) {
+function ChartTooltip({ active, payload, label, hideMoney }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs shadow-md">
       <p className="font-medium text-fg-muted">{label}</p>
-      <p className="tabular font-mono font-semibold text-fg">{formatKurus(payload[0].value * 100)}</p>
+      <p className="tabular font-mono font-semibold text-fg">
+        {formatKurusPrivate(payload[0].value * 100, hideMoney)}
+      </p>
     </div>
   );
 }
 
 /** Dashboard kâr grafikleri: son 6 ay (sütun) + bu ay günlük (çizgi). Sade, bilgi odaklı. */
-export function DashboardCharts() {
+export function DashboardCharts({ hideMoney = false }: { hideMoney?: boolean }) {
+  const axisFormatter = hideMoney ? () => "***" : formatAxisLira;
   const { data: monthly = [] } = useQuery({
     queryKey: ["dashboard-chart-monthly"],
     queryFn: () =>
@@ -122,9 +125,9 @@ export function DashboardCharts() {
                   axisLine={false}
                   tickLine={false}
                   width={54}
-                  tickFormatter={formatAxisLira}
+                  tickFormatter={axisFormatter}
                 />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-border)", opacity: 0.4 }} />
+                <Tooltip content={<ChartTooltip hideMoney={hideMoney} />} cursor={{ fill: "var(--color-border)", opacity: 0.4 }} />
                 <Bar dataKey="profit" fill="var(--color-primary)" radius={[3, 3, 0, 0]} maxBarSize={22} />
               </BarChart>
             </ResponsiveContainer>
@@ -154,9 +157,9 @@ export function DashboardCharts() {
                   axisLine={false}
                   tickLine={false}
                   width={54}
-                  tickFormatter={formatAxisLira}
+                  tickFormatter={axisFormatter}
                 />
-                <Tooltip content={<ChartTooltip />} cursor={{ stroke: "var(--color-border)" }} />
+                <Tooltip content={<ChartTooltip hideMoney={hideMoney} />} cursor={{ stroke: "var(--color-border)" }} />
                 <Line
                   type="monotone"
                   dataKey="profit"

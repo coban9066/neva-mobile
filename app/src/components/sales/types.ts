@@ -4,7 +4,7 @@ import type { CosmeticGrade, Region } from "@/types";
 export interface StockPhone {
   id: number;
   label: string;
-  imei1: string;
+  imei1: string | null;
   storage_gb: number | null;
   color: string | null;
   cosmetic_grade: CosmeticGrade | null;

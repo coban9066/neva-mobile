@@ -53,7 +53,7 @@ export interface Contact {
 
 export interface PhoneRow {
   id: number;
-  imei1: string;
+  imei1: string | null;
   imei2: string | null;
   brand_name: string | null;
   model_name: string | null;

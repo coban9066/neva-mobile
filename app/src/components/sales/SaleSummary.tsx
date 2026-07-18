@@ -24,7 +24,7 @@ export function SaleSummary({ phone, onClear }: { phone: StockPhone | null; onCl
             {phone.cosmetic_grade ? ` · ${GRADE_META[phone.cosmetic_grade].label} Kozmetik` : ""}
           </span>
         </p>
-        <p className="tabular font-mono text-[11px] text-fg-muted">{phone.imei1}</p>
+        <p className="tabular font-mono text-[11px] text-fg-muted">{phone.imei1 ?? "IMEI yok"}</p>
       </div>
       {phone.region && <RegionBadge region={phone.region} />}
       <button

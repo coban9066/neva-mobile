@@ -10,7 +10,7 @@ export function ImeiCopyDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  imei1: string;
+  imei1: string | null;
   imei2: string | null;
 }) {
   const { toast } = useUi();
@@ -24,16 +24,22 @@ export function ImeiCopyDialog({
   return (
     <Dialog open={open} onClose={onClose} title="IMEI Kopyala" width={340}>
       <div className="space-y-2">
-        <button
-          onClick={() => copy(imei1)}
-          className="flex w-full cursor-pointer items-center justify-between rounded-md border border-border-strong bg-surface px-3 py-2 text-left transition-colors hover:border-primary/50 hover:bg-surface-2"
-        >
-          <span>
-            <span className="block text-[10px] uppercase text-fg-muted">IMEI 1</span>
-            <span className="font-mono text-sm">{imei1}</span>
-          </span>
-          <Copy size={14} className="text-fg-muted" />
-        </button>
+        {imei1 ? (
+          <button
+            onClick={() => copy(imei1)}
+            className="flex w-full cursor-pointer items-center justify-between rounded-md border border-border-strong bg-surface px-3 py-2 text-left transition-colors hover:border-primary/50 hover:bg-surface-2"
+          >
+            <span>
+              <span className="block text-[10px] uppercase text-fg-muted">IMEI 1</span>
+              <span className="font-mono text-sm">{imei1}</span>
+            </span>
+            <Copy size={14} className="text-fg-muted" />
+          </button>
+        ) : (
+          <p className="rounded-md border border-dashed border-border-strong px-3 py-2 text-xs text-fg-muted">
+            Bu telefona IMEI girilmemiş.
+          </p>
+        )}
 
         {imei2 && (
           <button

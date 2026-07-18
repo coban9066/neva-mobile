@@ -118,7 +118,9 @@ export function CommandPalette() {
                   <span className="text-fg-muted">
                     {p.storage_gb ? `${p.storage_gb}GB` : ""} {p.color ?? ""}
                   </span>
-                  <span className="font-mono text-xs text-fg-muted">…{p.imei1.slice(-6)}</span>
+                  {p.imei1 && (
+                    <span className="font-mono text-xs text-fg-muted">…{p.imei1.slice(-6)}</span>
+                  )}
                   <span className="flex-1" />
                   <span className="text-xs text-fg-muted">
                     {PHONE_STATUS_LABELS[p.status]}

@@ -10,7 +10,7 @@ import { PHONE_STATUS_LABELS, type PhoneStatus } from "@/types";
 
 interface TagHit {
   id: number;
-  imei1: string;
+  imei1: string | null;
   brand_name: string | null;
   model_name: string | null;
   etiket_numarasi: string | null;

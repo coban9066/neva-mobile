@@ -6,7 +6,7 @@ import { formatDateTime } from "@/lib/utils";
 export interface ReceiptData {
   saleId: number;
   model: string;
-  imei: string;
+  imei: string | null;
   date: string;
   price: number;
   paymentLabel: string;
@@ -79,7 +79,7 @@ export async function generateReceiptPdf(data: ReceiptData): Promise<boolean> {
 
   const rows: [string, string][] = [
     [trAscii("Telefon Modeli"), trAscii(data.model)],
-    ["IMEI", data.imei],
+    ["IMEI", data.imei ?? "—"],
     [trAscii("Satış Tarihi"), formatDateTime(data.date)],
     [trAscii("Alıcı Adı"), trAscii(data.buyerName ?? "-")],
     [trAscii("Ödeme Türü"), trAscii(data.paymentLabel)],
