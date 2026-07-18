@@ -67,6 +67,7 @@ export interface PhoneRow {
   total_cost: number | null;
   last_event_at: string | null;
   notes: string | null;
+  etiket_numarasi: string | null;
 }
 
 export interface TimelineEvent {

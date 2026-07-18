@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Field } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 // Sales-specific sub-components
 import { PhoneSelector } from "@/components/sales/PhoneSelector";
@@ -40,6 +41,7 @@ interface SaleRow {
   customer_name: string | null;
   payment_method: string;
   price: number;
+  amount_paid: number;
   commission_amount: number;
   net_profit: number;
   warranty_months: number | null;
@@ -90,6 +92,8 @@ export function SalesPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [priceRaw, setPriceRaw] = useState("");
+  const [amountPaidRaw, setAmountPaidRaw] = useState("");
+  const [amountPaidTouched, setAmountPaidTouched] = useState(false);
   const [payment, setPayment] = useState<SalePayment>("cash");
   const [commissionMode, setCommissionMode] = useState<CommissionMode>("percent");
   const [commissionRaw, setCommissionRaw] = useState("");
@@ -100,6 +104,14 @@ export function SalesPage() {
   const [deleting, setDeleting] = useState(false);
 
   const phoneSearchInputRef = useRef<HTMLInputElement>(null);
+
+  // Alınan Ödeme varsayılan olarak Satış Fiyatı'nı takip eder (tam ödeme). Kullanıcı
+  // elle değiştirirse takip durur — kısmi ödeme desteklenir. POS/Kredi Kartı her zaman
+  // tam tutarı işlediği için o durumda takip zorunlu kalır.
+  const isCardPayment = toDbPayment(payment) === "pos";
+  useEffect(() => {
+    if (!amountPaidTouched || isCardPayment) setAmountPaidRaw(priceRaw);
+  }, [priceRaw, amountPaidTouched, isCardPayment]);
 
   // Global hotkeys inside checkout
   useEffect(() => {
@@ -126,9 +138,11 @@ export function SalesPage() {
         const active = document.activeElement;
         if (active && active.tagName !== "TEXTAREA") {
           const price = parseLiraInput(priceRaw);
+          const amountPaid = parseLiraInput(amountPaidRaw);
           const hasSelected = !!selectedPhone;
           const priceValid = price !== null && price > 0;
-          if (hasSelected && priceValid && !saving && !isReadOnly(license)) {
+          const amountPaidValid = amountPaid !== null && amountPaid > 0 && price !== null && amountPaid <= price;
+          if (hasSelected && priceValid && amountPaidValid && !saving && !isReadOnly(license)) {
             e.preventDefault();
             void handleSaveSale();
           }
@@ -138,14 +152,25 @@ export function SalesPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [viewMode, selectedPhone, priceRaw, saving, license, customerName, customerPhone, notes, payment]);
+  }, [
+    viewMode,
+    selectedPhone,
+    priceRaw,
+    amountPaidRaw,
+    saving,
+    license,
+    customerName,
+    customerPhone,
+    notes,
+    payment,
+  ]);
 
   // Fetch sales list
   const { data: rows = [], isLoading: isListLoading } = useQuery({
     queryKey: ["sales", listSearch],
     queryFn: () =>
       select<SaleRow>(
-        `SELECT s.id, s.date, s.phone_id, s.price, s.payment_method, s.commission_amount, p.imei1,
+        `SELECT s.id, s.date, s.phone_id, s.price, s.amount_paid, s.payment_method, s.commission_amount, p.imei1,
                 COALESCE(b.name || ' ' || p.model, 'Telefon #' || p.id) AS label,
                 COALESCE(s.contact_name, c.full_name) AS customer_name,
                 vp.net_profit,
@@ -191,6 +216,15 @@ export function SalesPage() {
       toast({ kind: "error", title: "Lütfen geçerli bir satış fiyatı girin." });
       return;
     }
+    const amountPaid = parseLiraInput(amountPaidRaw);
+    if (!amountPaid || amountPaid <= 0) {
+      toast({ kind: "error", title: "Lütfen geçerli bir alınan ödeme tutarı girin." });
+      return;
+    }
+    if (amountPaid > price) {
+      toast({ kind: "error", title: "Alınan ödeme, satış tutarını aşamaz." });
+      return;
+    }
 
     const hasCommission = payment === "pos" && commissionRaw.trim() !== "";
     const commissionValue = hasCommission ? parseCommissionRaw(commissionMode, commissionRaw) : null;
@@ -201,6 +235,7 @@ export function SalesPage() {
         args: {
           phoneId: selectedPhone.id,
           price: price,
+          amountPaid: amountPaid,
           paymentMethod: toDbPayment(payment),
           paymentLabel: SALE_PAYMENT_LABELS[payment],
           customerName: customerName.trim() || null,
@@ -226,6 +261,8 @@ export function SalesPage() {
       setCustomerPhone("");
       setNotes("");
       setPriceRaw("");
+      setAmountPaidRaw("");
+      setAmountPaidTouched(false);
       setPayment("cash");
       setCommissionMode("percent");
       setCommissionRaw("");
@@ -260,6 +297,9 @@ export function SalesPage() {
   };
 
   const salePrice = parseLiraInput(priceRaw);
+  const amountPaidValue = parseLiraInput(amountPaidRaw);
+  const remainingBalance =
+    salePrice != null && amountPaidValue != null ? Math.max(0, salePrice - amountPaidValue) : null;
   const commissionAmount =
     payment === "pos" && commissionRaw.trim() !== "" && salePrice != null
       ? calcCommissionAmount(commissionMode, parseCommissionRaw(commissionMode, commissionRaw), salePrice)
@@ -340,6 +380,7 @@ export function SalesPage() {
                     <th className="px-2 py-2 font-medium">IMEI</th>
                     <th className="px-2 py-2 font-medium">Müşteri</th>
                     <th className="px-2 py-2 font-medium">Ödeme</th>
+                    <th className="px-2 py-2 font-medium">Tahsilat</th>
                     <th className="px-2 py-2 text-right font-medium">Kar</th>
                     <th className="px-4 py-2 text-right font-medium">Satış Tutarı</th>
                     <th className="px-4 py-2 text-center font-medium w-20">İşlem</th>
@@ -359,6 +400,13 @@ export function SalesPage() {
                       </td>
                       <td className="px-2 py-2">{r.customer_name ?? "—"}</td>
                       <td className="px-2 py-2 text-fg-muted">{getPaymentLabel(r.payment_method)}</td>
+                      <td className="px-2 py-2">
+                        {r.amount_paid >= r.price ? (
+                          <Badge variant="success">Tamamlandı</Badge>
+                        ) : (
+                          <Badge variant="warning">Bekleyen Tahsilat</Badge>
+                        )}
+                      </td>
                       <td
                         className={cn(
                           "tabular px-2 py-2 text-right font-medium",
@@ -434,6 +482,7 @@ export function SalesPage() {
               selectedId={selectedPhone?.id ?? null}
               onSelect={(p) => {
                 setSelectedPhone(p);
+                setAmountPaidTouched(false);
                 // Pre-fill price suggestions if available (e.g. total cost)
                 if (!priceRaw) {
                   setPriceRaw(String(p.total_cost / 100));
@@ -465,7 +514,7 @@ export function SalesPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-4 rounded-lg border border-border bg-surface p-4">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-muted">Ödeme Bilgileri</h3>
-                  <Field label="Satış Fiyatı (₺)" hint="Kuruş hesabı için küsuratsız veya virgüllü yazabilirsiniz">
+                  <Field label="Toplam Satış Tutarı (₺)" hint="Kuruş hesabı için küsuratsız veya virgüllü yazabilirsiniz">
                     <Input
                       value={priceRaw}
                       onChange={(e) => setPriceRaw(e.target.value.replace(/[^\d.,]/g, ""))}
@@ -474,6 +523,46 @@ export function SalesPage() {
                       className="tabular font-mono text-[13px]"
                     />
                   </Field>
+
+                  <Field
+                    label="Alınan Ödeme (₺)"
+                    hint={
+                      isCardPayment
+                        ? "POS/Kredi Kartı her zaman tam tutarı işler"
+                        : "Tutarın tamamı alınmadıysa düşürün — kalan, Bekleyen Ödemeler'e düşer"
+                    }
+                    error={
+                      amountPaidValue !== null && salePrice !== null && amountPaidValue > salePrice
+                        ? "Satış tutarını aşamaz"
+                        : null
+                    }
+                  >
+                    <Input
+                      value={amountPaidRaw}
+                      onChange={(e) => {
+                        setAmountPaidTouched(true);
+                        setAmountPaidRaw(e.target.value.replace(/[^\d.,]/g, ""));
+                      }}
+                      disabled={isCardPayment}
+                      placeholder="15.000"
+                      inputMode="decimal"
+                      className="tabular font-mono text-[13px]"
+                    />
+                  </Field>
+
+                  <div className="flex items-baseline justify-between rounded-md bg-surface-2/60 px-3 py-2">
+                    <span className="text-xs font-medium text-fg-muted">Kalan Alacak</span>
+                    <span
+                      className={cn(
+                        "tabular font-mono text-sm font-semibold",
+                        remainingBalance != null && remainingBalance > 0
+                          ? "text-destructive"
+                          : "text-success"
+                      )}
+                    >
+                      {remainingBalance != null ? formatKurus(remainingBalance) : "—"}
+                    </span>
+                  </div>
 
                   <Field label="Ödeme Türü">
                     <PaymentSelector value={payment} onChange={setPayment} />
@@ -496,7 +585,16 @@ export function SalesPage() {
             {selectedPhone && (
               <div className="border-t border-border pt-4">
                 <SaleActions
-                  canSave={!!selectedPhone && salePrice !== null && salePrice > 0 && !saving && !isReadOnly(license)}
+                  canSave={
+                    !!selectedPhone &&
+                    salePrice !== null &&
+                    salePrice > 0 &&
+                    amountPaidValue !== null &&
+                    amountPaidValue > 0 &&
+                    amountPaidValue <= salePrice &&
+                    !saving &&
+                    !isReadOnly(license)
+                  }
                   saving={saving}
                   onSave={handleSaveSale}
                 />

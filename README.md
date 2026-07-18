@@ -51,6 +51,7 @@ Excel'de ayrı bir sayfa alış için, ayrı bir sayfa satış için. Defterde d
 - Telefon Alış Yönetimi
 - Telefon Satış Yönetimi
 - IMEI Yönetimi
+- 🏷️ Etiket Numarası ile Hızlı Arama
 - Kâr Hesaplama
 - 💬 WhatsApp'ta Paylaş
 
@@ -60,6 +61,7 @@ Excel'de ayrı bir sayfa alış için, ayrı bir sayfa satış için. Defterde d
 **🛡️ Güvence**
 - Garanti Takibi
 - 🧾 Telefon Bazlı Masraf Sistemi
+- 💳 Eksik Ödeme / Bekleyen Tahsilat Takibi
 - Kasa Yönetimi
 - 🗂️ Veri Yönetimi
 - Lisans Sistemi
@@ -95,6 +97,9 @@ Tek tıkla WhatsApp'ta paylaşın. Model, depolama, kozmetik, pil sağlığı, m
 
 **🛡️ Garanti Takibi**
 Satılan telefonların garanti süresini, başlangıç ve bitiş tarihlerini kolayca takip edin.
+
+**💳 Eksik Ödeme / Bekleyen Tahsilat**
+Müşteri ödemenin tamamını yapmasa bile satışı kaydedin; kalan alacak otomatik olarak "Bekleyen Ödemeler" listesine düşer, tek tıkla tahsilat alabilirsiniz.
 
 **📊 Kasa Yönetimi**
 Toplam alış, satış, kâr ve gider bilgilerinizi tek ekranda görün.
@@ -174,6 +179,7 @@ Gerçek ekranlar, gerçek akış — NEVA MOBILE'ın günlük kullanımda nasıl
 | | 📊 Excel / Defter | ✅ NEVA MOBILE |
 |---|:---:|:---:|
 | IMEI Takibi | ✗ | ✓ |
+| Etiket Numarasıyla Hızlı Arama | ✗ | ✓ |
 | Garanti Takibi | ✗ | ✓ |
 | Otomatik Kâr Hesabı | ✗ | ✓ |
 | Kasa Yönetimi | Manuel | ✓ Otomatik |

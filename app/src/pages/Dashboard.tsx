@@ -10,6 +10,7 @@ import {
   ShieldAlert,
   Award,
   Coins,
+  HandCoins,
 } from "lucide-react";
 import { selectOne, select } from "@/lib/db";
 import { formatKurus } from "@/lib/money";
@@ -29,6 +30,7 @@ interface Kpis {
   today_profit: number | null;
   stock_value: number | null;
   warranty_soon: number;
+  pending_collection: number | null;
 }
 
 interface TopProfitBrandRow {
@@ -67,7 +69,9 @@ export function DashboardPage() {
           (SELECT COUNT(*) FROM phones
              WHERE deleted_at IS NULL AND warranty_until IS NOT NULL
                AND date(warranty_until) >= date('now','localtime')
-               AND date(warranty_until) <= date('now','localtime','+30 days')) AS warranty_soon`
+               AND date(warranty_until) <= date('now','localtime','+30 days')) AS warranty_soon,
+          (SELECT SUM(price - amount_paid) FROM sales
+             WHERE deleted_at IS NULL AND amount_paid < price) AS pending_collection`
       ),
   });
 
@@ -158,6 +162,13 @@ export function DashboardPage() {
       value: topProfitBrand?.brand ?? "—",
       unit: topProfitBrand ? formatKurus(topProfitBrand.profit) : undefined,
       to: "/satislar",
+    },
+    {
+      icon: HandCoins,
+      label: "Bekleyen Tahsilat",
+      value: formatKurus(kpis?.pending_collection ?? 0),
+      tone: (kpis?.pending_collection ?? 0) > 0 ? ("warning" as CardTone) : "default",
+      to: "/bekleyen-odemeler",
     },
   ];
 

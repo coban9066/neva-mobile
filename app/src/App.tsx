@@ -21,6 +21,7 @@ import { PhonesPage } from "@/pages/Phones";
 import { PurchasesPage } from "@/pages/Purchases";
 import { SalesPage } from "@/pages/Sales";
 import { WarrantyPage } from "@/pages/Warranty";
+import { PendingPaymentsPage } from "@/pages/PendingPayments";
 import { KasaPage } from "@/pages/Kasa";
 import { SettingsPage } from "@/pages/Settings";
 import { DataManagementPage } from "@/pages/DataManagement";
@@ -45,6 +46,7 @@ function Workspace() {
             <Route path="/alislar" element={<PurchasesPage />} />
             <Route path="/satislar" element={<SalesPage />} />
             <Route path="/garanti" element={<WarrantyPage />} />
+            <Route path="/bekleyen-odemeler" element={<PendingPaymentsPage />} />
             <Route path="/kasa" element={<KasaPage />} />
             <Route path="/ayarlar" element={<SettingsPage />} />
             <Route path="/veri-yonetimi" element={<DataManagementPage />} />
