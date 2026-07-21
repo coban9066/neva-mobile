@@ -26,6 +26,7 @@ const MIGRATIONS_RAW: &[(i64, &str, &str)] = &[
     (14, "etiket_numarasi", include_str!("../migrations/014_etiket_numarasi.sql")),
     (15, "partial_payment", include_str!("../migrations/015_partial_payment.sql")),
     (16, "imei_optional", include_str!("../migrations/016_imei_optional.sql")),
+    (17, "etiket_exact_match", include_str!("../migrations/017_etiket_exact_match.sql")),
 ];
 
 async fn sqlite_pool(
@@ -151,9 +152,9 @@ async fn save_purchase(
     };
 
     if let Some(tag) = etiket_numarasi {
+        // Tam eşleşme (BINARY) — LIKE/contains veya harf-duyarsız karşılaştırma kullanılmaz.
         let clash: Option<(i64,)> = sqlx::query_as(
-            "SELECT id FROM phones WHERE etiket_numarasi = ?1 COLLATE NOCASE
-             AND id IS NOT ?2",
+            "SELECT id FROM phones WHERE etiket_numarasi = ?1 AND id IS NOT ?2",
         )
         .bind(tag)
         .bind(existing.as_ref().map(|(id, _)| *id))
@@ -982,8 +983,9 @@ async fn update_phone_tag(
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
     if let Some(tag) = tag {
+        // Tam eşleşme (BINARY) — LIKE/contains veya harf-duyarsız karşılaştırma kullanılmaz.
         let clash: Option<(i64,)> = sqlx::query_as(
-            "SELECT id FROM phones WHERE etiket_numarasi = ?1 COLLATE NOCASE AND id IS NOT ?2",
+            "SELECT id FROM phones WHERE etiket_numarasi = ?1 AND id IS NOT ?2",
         )
         .bind(tag)
         .bind(phone_id)
