@@ -9,6 +9,11 @@ app/dist-ssr/
 app/src-tauri/target/
 app/src-tauri/gen/schemas/
 license-manager/target/
+mobile/build/
+mobile/android/build/
+mobile/android/.gradle/
+mobile/.dart_tool/
+mobile/android/local.properties
 
 # Editor / OS
 .vscode/*

@@ -77,16 +77,22 @@ fn hex_of(b: &[u8]) -> String {
     b.iter().map(|x| format!("{x:02x}")).collect()
 }
 
-/// "NVM-84A2-93BC-18FD" → 6 bayt
+/// "NVM-84A2-93BC-18FD" → 6 bayt. Platform önekleri (ör. "ANDROID-") harf
+/// filtresinden kaçabilen A-F arası hex harfleri içerebilir ("ANDROID" içindeki
+/// A/D/D gibi); bu yüzden filtrelenmiş dizinin TAMAMI değil, SON 12 hex karakteri
+/// alınır — asıl 6 baytlık cihaz özeti her zaman dizginin sonunda kalır. Mevcut
+/// "NVM-..." formatı zaten tam 12 hex karakter ürettiğinden ("NVM" hiç hex harf
+/// içermez) bu değişiklik geriye dönük olarak birebir aynı sonucu verir.
 fn parse_device_id(s: &str) -> Option<[u8; 6]> {
     let hex: String = s
         .to_uppercase()
         .chars()
         .filter(|c| c.is_ascii_hexdigit())
         .collect();
-    if hex.len() != 12 {
+    if hex.len() < 12 {
         return None;
     }
+    let hex = &hex[hex.len() - 12..];
     let mut out = [0u8; 6];
     for i in 0..6 {
         out[i] = u8::from_str_radix(&hex[i * 2..i * 2 + 2], 16).ok()?;
@@ -687,6 +693,34 @@ impl App {
                 ui.label(RichText::new(format!("{} — {} · {}", ev.at, label, ev.detail)).small());
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod parse_device_id_tests {
+    use super::parse_device_id;
+
+    #[test]
+    fn nvm_format_unchanged() {
+        assert_eq!(
+            parse_device_id("NVM-84A2-93BC-18FD"),
+            Some([0x84, 0xA2, 0x93, 0xBC, 0x18, 0xFD])
+        );
+    }
+
+    #[test]
+    fn android_format_strips_prefix_noise() {
+        // "ANDROID" harfleri arasındaki A/D/D hex-benzeri karakterleri asıl
+        // 6 baytlık özetten önce gelir; son 12 hex karakter doğru özeti verir.
+        assert_eq!(
+            parse_device_id("ANDROID-1A2B3C4D5E6F"),
+            Some([0x1A, 0x2B, 0x3C, 0x4D, 0x5E, 0x6F])
+        );
+    }
+
+    #[test]
+    fn too_short_is_none() {
+        assert_eq!(parse_device_id("NVM-1234"), None);
     }
 }
 

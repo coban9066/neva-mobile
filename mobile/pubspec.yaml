@@ -1,0 +1,63 @@
+name: mobile
+description: "NEVA MOBILE — Android sürümü (Flutter). Masaüstü (Tauri/Rust) sürümüyle aynı SQLite şeması ve lisans algoritmasını paylaşır."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Veritabanı
+  sqflite: ^2.3.3+1
+  path: ^1.9.0
+  path_provider: ^2.1.3
+
+  # Lisans (Ed25519 doğrulama + cihaz kimliği)
+  ed25519_edwards: ^0.3.1
+  crypto: ^3.0.3
+  # NOT: "android_id" paketi (jni bağımlılığı üzerinden) mevcut Gradle/Kotlin DSL
+  # kurulumuyla derleme hatası veriyordu. Settings.Secure.ANDROID_ID okumak tek
+  # satırlık bir Android API çağrısı olduğu için üçüncü parti paket yerine
+  # MainActivity.kt içinde kendi MethodChannel'ımız kullanılıyor (bkz. device_id.dart).
+
+  # Format
+  intl: ^0.19.0
+
+  cupertino_icons: ^1.0.8
+
+  # --- FAZ 2'DE EKLENECEK (şu an kodda kullanılmıyor, bilinçli olarak dışarıda
+  # tutuldu — bkz. README "Faz durumu"). Bu Flutter sürümünde (3.44.8) bazı
+  # eklentiler (file_picker → flutter_plugin_android_lifecycle, printing →
+  # birçok androidx bağımlılığı) kendi android/build.gradle'larında eski/sabit
+  # bir compileSdk taşıyor ve proje genelinde override edilemiyor (denenen
+  # yöntemler: local.properties flutter.compileSdkVersion, app-level compileSdk,
+  # subprojects{} ve afterEvaluate{} zorlamaları — hiçbiri Flutter'ın kendi
+  # eklenti-yükleyicisinin dahil ettiği alt projelere ulaşamadı). Bu paketler
+  # gerçekten kullanılacağı fazda, o zamanki Flutter/AGP sürümüyle yeniden
+  # değerlendirilip eklenecek:
+  #   fl_chart          (Dashboard grafikleri)
+  #   pdf, printing      (PDF Raporlar)
+  #   share_plus         (WhatsApp paylaşımı)
+  #   http               (Android Auto Update — latest-android.json kontrolü)
+  #   package_info_plus  (uygulama sürümü)
+  #   url_launcher       (harici bağlantılar)
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+# path_provider_android'in guncel surumleri "jni" paketini kullaniyor; o paketin
+# Gradle build.gradle'i mevcut Kotlin Gradle Plugin surumuyle uyumsuz olup
+# "Could not find method kotlin()" hatasi veriyor (bilinen ekosistem sorunu).
+# jni-oncesi kararli surume sabitlenerek Android derlemesi calisir hale getirildi.
+dependency_overrides:
+  path_provider_android: 2.2.10
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/migrations/
