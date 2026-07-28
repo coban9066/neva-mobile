@@ -22,9 +22,9 @@
 
 <br>
 
-### ⬇️ [**Windows Setup.exe**](https://github.com/coban9066/neva-mobile/releases/latest) &nbsp;·&nbsp; [**Android APK**](https://github.com/coban9066/neva-mobile/releases/latest)
+### ⬇️ [**Windows Setup.exe**](https://github.com/coban9066/neva-mobile/releases/latest) &nbsp;·&nbsp; [**Windows 7 Setup.exe**](https://github.com/coban9066/neva-mobile/releases/tag/legacy-win7) &nbsp;·&nbsp; [**Android APK**](https://github.com/coban9066/neva-mobile/releases/tag/android-v1.0.0)
 
-**Son sürümleri indirmek için yukarıdaki bağlantılara tıklayın.**
+**Platformunuza uygun bağlantıya tıklayarak son sürümü indirin.**
 
 </div>
 
@@ -119,6 +119,33 @@ Tüm veriler bilgisayarınızda saklanır. İnternet olmasa da çalışmaya deva
 
 **💳 Lisans Sistemi**
 Tek seferlik lisansla süresiz kullanın. Bilgisayar değiştirirseniz lisans transferi yapılır.
+
+<br>
+
+---
+
+<br>
+
+## 📱 NEVA MOBILE Android
+
+**NEVA MOBILE artık Android'de de var.** Flutter (Material 3) ile sıfırdan
+tasarlanan bağımsız bir mobil sürüm — masaüstüyle **aynı SQLite şemasını**
+ve **aynı Ed25519 lisans sistemini** paylaşır, tek lisansla her iki
+platformda da çalışır.
+
+**İlk sürümde (v1.0.0) bulunanlar:** Dashboard (Gizlilik Modu dahil),
+Telefonlar (Etiket No araması), Telefon Al (opsiyonel IMEI), Telefon Sat
+(kısmi ödeme desteği), Telefon Düzenle, Lisans Aktivasyonu. Kasa, Masraflar,
+Garanti Takibi, Bekleyen Ödemeler, PDF Raporlar ve otomatik güncelleme
+kontrolü sonraki sürümlerde geliyor.
+
+**Gereksinim:** Android 7.0 (API 24) ve üzeri.
+
+### ⬇️ [**Android APK — v1.0.0'ı indir**](https://github.com/coban9066/neva-mobile/releases/tag/android-v1.0.0)
+
+<br>
+
+---
 
 <br>
 

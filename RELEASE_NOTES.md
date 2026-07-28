@@ -1,5 +1,10 @@
 # NEVA MOBILE v1.0.0 🎉
 
+**İndirme:** her platformun kendi release sayfası var —
+[Windows 10/11](https://github.com/coban9066/neva-mobile/releases/tag/v1.0.0) ·
+[Windows 7 Legacy](https://github.com/coban9066/neva-mobile/releases/tag/legacy-win7) ·
+[Android](https://github.com/coban9066/neva-mobile/releases/tag/android-v1.0.0)
+
 **NEVA MOBILE artık Android'de de var.** Bu, ürünün ilk büyük dönüm noktası
 sürümü — Windows masaüstü uygulamasının yanına, aynı veritabanı yapısını ve
 aynı lisans sistemini paylaşan bağımsız bir Android sürümü ekleniyor.
