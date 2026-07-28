@@ -1,26 +1,48 @@
-# NEVA MOBILE v0.2.6
+# NEVA MOBILE v1.0.0 🎉
 
-Bu sürüm, etiket numarası benzersizlik kontrolündeki kritik bir hatayı
-düzeltir.
+**NEVA MOBILE artık Android'de de var.** Bu, ürünün ilk büyük dönüm noktası
+sürümü — Windows masaüstü uygulamasının yanına, aynı veritabanı yapısını ve
+aynı lisans sistemini paylaşan bağımsız bir Android sürümü ekleniyor.
 
-## 🐞 Kritik Düzeltme — Etiket Numarası Benzersizlik Kontrolü
+## 📱 Yeni: NEVA MOBILE Android
 
-- Etiket numarası kontrolü daha önce büyük/küçük harf duyarsız (`COLLATE
-  NOCASE`) karşılaştırma kullanıyordu; bazı durumlarda bu, veritabanında
-  hiç bulunmayan etiket numaralarının ("251", "274", "277", "278" gibi)
-  yanlışlıkla "kullanımda" olarak işaretlenmesine yol açıyordu.
-- Kontrol artık **kesin (BINARY) tam eşleşme** kullanıyor — LIKE, contains,
-  startsWith veya harf-duyarsız karşılaştırma yok. Yalnızca birebir aynı
-  metin çakışma sayılır.
-- Aynı kaydın kendi etiket numarasını tekrar kaydetmesi (örn. Telefon
-  Detayı'ndan düzenlerken değer değişmese de) çakışma sayılmaz.
-- 250, 251, 252, 253… gibi ardışık boş etiket numaraları artık sorunsuz,
-  kesintisiz kaydedilebiliyor.
-- Migration eski veritabanlarını bozmaz; mevcut etiket numaraları ve
-  benzersizlik korunur.
+- **Flutter (Material 3)** ile geliştirildi, dokunmatik kullanım için
+  sıfırdan tasarlandı — masaüstü ekranları birebir kopyalanmadı.
+- **Aynı SQLite şeması:** Masaüstünün bugünkü (v0.2.6) veritabanı yapısıyla
+  bire bir uyumlu — kendi migration sistemi var, gelecekteki güncellemeler
+  güvenle uygulanır.
+- **Aynı lisans sistemi:** Windows'taki Ed25519 imza algoritmasının birebir
+  Android portu. NEVA LICENSE MANAGER (geliştirici aracı) **değişmeden**
+  hem Windows (`NVM-XXXX-XXXX-XXXX`) hem Android (`ANDROID-XXXXXXXXXXXX`)
+  cihaz kimlikleri için kod üretebiliyor. Platform seçme ekranı yok — lisans
+  doğrulama mantığı tüm platformlarda aynı.
+- **Tamamen offline çalışır** — telefon ekleme, satış, kasa hesapları hep
+  yerel veritabanında; internet yalnızca lisans/güncelleme kontrolü için
+  kullanılır.
+- **Bu sürümde bulunanlar:** Dashboard (KPI kartları + Gizlilik Modu),
+  Telefonlar (liste, Etiket No araması), Telefon Al (IMEI opsiyonel),
+  Telefon Sat (kısmi ödeme desteği), Telefon Düzenle (IMEI/Etiket
+  Numarası yerinde düzenleme), Lisans Aktivasyonu.
+- **Sonraki sürümlerde gelecek:** Kasa, Masraflar, Garanti Takibi, Bekleyen
+  Ödemeler listesi, Dashboard grafikleri, Veri Yönetimi (Backup/Restore),
+  PDF Raporlar, Ayarlar ve Android üzerinden otomatik güncelleme kontrolü.
+
+## 🖥️ Windows Sürümü
+
+Windows 10/11 ve Windows 7 Legacy sürümleri her zamanki gibi güncellendi ve
+bozulmadan çalışmaya devam ediyor. Son sürümlerde (v0.2.2 – v0.2.6) eklenen
+ve bu sürümde de yer alan özellikler:
+
+- 🏷️ Etiket Numarası sistemi (ekleme, düzenleme, Etiket No ile hızlı arama)
+- 📱 Opsiyonel IMEI — sonradan Telefon Detayı'ndan eklenebilir/değiştirilebilir
+- 💳 Eksik Ödeme / Bekleyen Tahsilat takibi (Kasa ve Dashboard'da görünür)
+- 🙈 Gizlilik Modu — tek tuşla tüm parasal değerleri maskele
+- 🐞 Kritik düzeltmeler: satılan telefonların Garanti ekranında görünmesi ve
+  etiket numarası benzersizlik kontrolündeki yanlış-pozitif hatası giderildi
 
 ## Sistem Gereksinimleri
-- **Standart sürüm:** Windows 10 (1803+) / Windows 11, x64
-- **Legacy sürüm:** Windows 7 SP1 x64 (KB4474419 ve TLS 1.2 güncellemeleri kurulu)
+- **Windows (Standart):** Windows 10 (1803+) / Windows 11, x64
+- **Windows (Legacy):** Windows 7 SP1 x64 (KB4474419 ve TLS 1.2 güncellemeleri kurulu)
+- **Android:** Android 7.0 (API 24) ve üzeri
 
 Teşekkürler.

@@ -8,7 +8,7 @@
 <br>
 
 [![Latest Release](https://img.shields.io/github/v/release/coban9066/neva-mobile?label=s%C3%BCr%C3%BCm&color=2ea44f&style=for-the-badge)](https://github.com/coban9066/neva-mobile/releases/latest)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/coban9066/neva-mobile/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Android-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/coban9066/neva-mobile/releases/latest)
 [![Offline](https://img.shields.io/badge/%C3%A7al%C4%B1%C5%9Fma-tamamen%20offline-16a34a?style=for-the-badge)](#)
 
 <br>
@@ -17,11 +17,14 @@
 [![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)](#)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](#)
 [![Rust](https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust&logoColor=white)](#)
+[![Flutter](https://img.shields.io/badge/Flutter-02569B?style=flat-square&logo=flutter&logoColor=white)](#)
 [![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)](#)
 
 <br>
 
-### ⬇️ [**NEVA MOBILE Setup.exe — Son Sürümü İndir**](https://github.com/coban9066/neva-mobile/releases/latest)
+### ⬇️ [**Windows Setup.exe**](https://github.com/coban9066/neva-mobile/releases/latest) &nbsp;·&nbsp; [**Android APK**](https://github.com/coban9066/neva-mobile/releases/latest)
+
+**Son sürümleri indirmek için yukarıdaki bağlantılara tıklayın.**
 
 </div>
 
