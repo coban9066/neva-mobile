@@ -42,8 +42,6 @@ fn key_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("."))
 }
 
-const DEFAULT_PRIVATE_KEY_HEX: &str = "18eb77a34441a91005262839f0e991d79c5c38a7817b89012e85867ca9ead56b";
-
 fn load_or_create_key() -> (SigningKey, String) {
     let dir = key_dir();
     let priv_path = dir.join("neva_private.key");
@@ -51,9 +49,13 @@ fn load_or_create_key() -> (SigningKey, String) {
     let hex = if let Ok(h) = fs::read_to_string(&priv_path) {
         h
     } else {
-        let default_hex = DEFAULT_PRIVATE_KEY_HEX.to_string();
-        fs::write(&priv_path, &default_hex).expect("private key yazılamadı");
-        default_hex
+        // Gerçek anahtar dosyası (exe yanındaki neva_private.key) kaybolursa
+        // sabit/bilinen bir değere düşmek yerine rastgele yeni bir anahtar
+        // üretilir — sabit bir private key asla kaynak kodunda tutulmaz.
+        let key = SigningKey::generate(&mut rand::rngs::OsRng);
+        let new_hex = hex_of(&key.to_bytes());
+        fs::write(&priv_path, &new_hex).expect("private key yazılamadı");
+        new_hex
     };
 
     let bytes: Vec<u8> = (0..64)
