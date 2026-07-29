@@ -11,7 +11,18 @@ use sha2::{Digest, Sha256};
 use sqlx::{Pool, Sqlite};
 
 /// License Manager keygen çıktısı — private key yalnız geliştiricide.
-const PUBLIC_KEY_HEX: &str = "1ed139b3e243e880de672ddb1883933a4292489f70f1c647914f7919c19e30fe";
+/// 2026-07-28 anahtar rotasyonu: eski private key kaynak kodunda açık halde
+/// bulunduğu için (bkz. commit ef50ba9) yeni bir anahtara geçildi. Önceden
+/// satılmış lisansların çalışmaya devam etmesi için ESKİ public key de bir
+/// süre daha (geçiş dönemi) güvenilir listede tutuluyor. Yeni üretilen tüm
+/// lisanslar artık YENİ anahtarla imzalanıyor. Geçiş dönemi sonunda (tüm
+/// gerçek müşteriler yeni koda geçtiğinde) OLD_PUBLIC_KEY_HEX listeden
+/// çıkarılmalı — o ana kadar eski (sızmış) anahtarla üretilebilecek sahte
+/// kodlar da geçerli sayılmaya devam eder, bu bilinçli bir geçiş tercihidir.
+const TRUSTED_PUBLIC_KEYS_HEX: &[&str] = &[
+    "9830592b7b02e79c16efb19938343c9a826cb1bc0915098478e9c1e20d6bf925", // YENİ (2026-07-28+)
+    "1ed139b3e243e880de672ddb1883933a4292489f70f1c647914f7919c19e30fe", // ESKİ (sızmıştı — yalnızca geçiş dönemi için)
+];
 const EPOCH: &str = "2024-01-01";
 const PLAN_LABELS: &[&str] = &["Deneme", "1 Ay", "3 Ay", "6 Ay", "12 Ay", "Sınırsız"];
 
@@ -164,26 +175,6 @@ fn decode_and_verify(code: &str) -> Result<Payload, &'static str> {
         return Err("version");
     }
 
-    let key_bytes: [u8; 32] = match (0..64)
-        .step_by(2)
-        .filter_map(|i| u8::from_str_radix(&PUBLIC_KEY_HEX[i..i + 2], 16).ok())
-        .collect::<Vec<u8>>()
-        .try_into() {
-            Ok(kb) => kb,
-            Err(_) => {
-                println!("Failure: Invalid public key hex parsing.");
-                return Err("pubkey");
-            }
-        };
-        
-    let key = match VerifyingKey::from_bytes(&key_bytes) {
-        Ok(k) => k,
-        Err(_) => {
-            println!("Failure: VerifyingKey initialization failed.");
-            return Err("pubkey");
-        }
-    };
-    
     let sig = match Signature::from_slice(sig) {
         Ok(s) => s,
         Err(_) => {
@@ -191,18 +182,49 @@ fn decode_and_verify(code: &str) -> Result<Payload, &'static str> {
             return Err("sig");
         }
     };
-    
-    // Compute public key fingerprint (SHA256 of public key)
-    let mut hasher = Sha256::new();
-    hasher.update(&key_bytes);
-    let pub_fingerprint: String = hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect();
-    println!("Verification Public Key: {}", PUBLIC_KEY_HEX);
-    println!("Public Key Fingerprint: {}", pub_fingerprint);
-    
-    let sig_result = key.verify(payload, &sig);
-    println!("Signature Verification Result: {:?}", sig_result);
-    if sig_result.is_err() {
-        println!("Failure: Ed25519 signature verification failed.");
+
+    // Birden fazla güvenilir anahtar denenir (geçiş dönemi): sırayla her
+    // public key ile imza doğrulaması denenir, ilk başarılı olan kabul edilir.
+    let mut verified = false;
+    for pub_hex in TRUSTED_PUBLIC_KEYS_HEX {
+        let key_bytes: [u8; 32] = match (0..64)
+            .step_by(2)
+            .filter_map(|i| u8::from_str_radix(&pub_hex[i..i + 2], 16).ok())
+            .collect::<Vec<u8>>()
+            .try_into()
+        {
+            Ok(kb) => kb,
+            Err(_) => {
+                println!("Failure: Invalid public key hex parsing for {}.", pub_hex);
+                continue;
+            }
+        };
+
+        let key = match VerifyingKey::from_bytes(&key_bytes) {
+            Ok(k) => k,
+            Err(_) => {
+                println!("Failure: VerifyingKey initialization failed for {}.", pub_hex);
+                continue;
+            }
+        };
+
+        let mut hasher = Sha256::new();
+        hasher.update(&key_bytes);
+        let pub_fingerprint: String = hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect();
+
+        let sig_result = key.verify(payload, &sig);
+        println!(
+            "Trying Public Key: {} (fingerprint {}) -> {:?}",
+            pub_hex, pub_fingerprint, sig_result
+        );
+        if sig_result.is_ok() {
+            verified = true;
+            break;
+        }
+    }
+
+    if !verified {
+        println!("Failure: Ed25519 signature verification failed against all trusted keys.");
         return Err("sig");
     }
 
@@ -430,12 +452,25 @@ pub async fn activate(pool: &Pool<Sqlite>, code: &str) -> Result<LicenseStatus, 
 mod tests {
     use super::*;
 
+    /// Cihaz eşleşmesi kasıtlı olarak test edilmiyor (decode_and_verify bunu
+    /// kontrol etmez) — bu kodlar farklı makineler için üretildiği için
+    /// device_hash() karşılaştırması ortama göre değişir ve taşınabilir olmaz.
+    /// Yalnızca Base32 çözme + Ed25519 imza doğrulamasının doğruluğu test edilir.
+
     #[test]
-    fn test_valid_license() {
+    fn test_valid_license_old_key() {
+        // 2026-07-28 rotasyonundan önceki (artık sızmış sayılan) anahtarla
+        // imzalanmış gerçek bir kod — geçiş dönemi boyunca hâlâ geçerli olmalı.
         let code = "NVM-AFT4U-RYR6J-ZQCA4-WAO2D-4JAT2-TDQM3-YAJJY-IFD2M-DKE2Z-SDNZY-4BZYQ-N5D2K-RMTNX-7OFBB-JAFZX-SZEYY-IMGJ6-T2JBK-TO5US-V5J55-TYFVM-DGJ2F-Q5WEA-55KMZ-BU";
         let res = decode_and_verify(code);
-        assert!(res.is_ok(), "License validation failed: {:?}", res.err());
-        let payload = res.unwrap();
-        assert_eq!(payload.device, device_hash(), "Device ID mismatch");
+        assert!(res.is_ok(), "Old-key license validation failed: {:?}", res.err());
+    }
+
+    #[test]
+    fn test_valid_license_new_key() {
+        // Rotasyon sonrası yeni anahtarla imzalanmış kod.
+        let code = "NVM-AEDOS-OFAFA-IAKA5-M777Y-N4E4Q-5RTU7-DVQYE-2XLPC-BWTFU-M4NSA-S7CLK-OU6CV-EW6E2-RHNE6-DLC54-4LCBU-YBQ67-33RHH-ES3MA-I4TWY-WQOTE-WNVXQ-JZJVC-436OP-AA";
+        let res = decode_and_verify(code);
+        assert!(res.is_ok(), "New-key license validation failed: {:?}", res.err());
     }
 }
