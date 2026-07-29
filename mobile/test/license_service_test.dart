@@ -30,6 +30,15 @@ void main() {
       expect(payload, isNotNull, reason: 'İmza doğrulaması başarısız oldu — Base32/Ed25519 portunda hata var.');
     });
 
+    test('new-key-issued code (post 2026-07-28 rotation) also verifies', () {
+      // license.rs test_valid_license_new_key ile aynı kod — anahtar rotasyonu
+      // sonrası üretilen kodların da Android tarafında doğrulandığını kanıtlar.
+      const code =
+          'NVM-AEDOS-OFAFA-IAKA5-M777Y-N4E4Q-5RTU7-DVQYE-2XLPC-BWTFU-M4NSA-S7CLK-OU6CV-EW6E2-RHNE6-DLC54-4LCBU-YBQ67-33RHH-ES3MA-I4TWY-WQOTE-WNVXQ-JZJVC-436OP-AA';
+      final payload = LicenseService.decodeAndVerify(code);
+      expect(payload, isNotNull, reason: 'Yeni anahtarla imzalanmış kod doğrulanamadı.');
+    });
+
     test('garbage code fails gracefully (returns null, does not throw)', () {
       final payload = LicenseService.decodeAndVerify('NVM-NOT-A-REAL-CODE');
       expect(payload, isNull);

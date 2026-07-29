@@ -1,7 +1,7 @@
 name: mobile
 description: "NEVA MOBILE — Android sürümü (Flutter). Masaüstü (Tauri/Rust) sürümüyle aynı SQLite şeması ve lisans algoritmasını paylaşır."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: '>=3.4.0 <4.0.0'

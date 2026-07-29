@@ -10,15 +10,18 @@ import 'license_payload.dart';
 /// birebir aynıdır — NEVA LICENSE MANAGER (Windows) tek doğrulama otoritesidir,
 /// Android burada yalnızca doğrular, kod üretmez.
 class LicenseService {
-  /// license.rs'deki PUBLIC_KEY_HEX ile birebir aynı sabit. Rust tarafı da bu
-  /// dizinin yalnızca ilk 64 hex karakterini (32 bayt) kullanır; burada da aynı
-  /// davranış korunur.
-  static const String _publicKeyHexRaw =
-      '1ed139b3e243e880de672ddb1883933a4292489f70f1c647914f7919c19e30fe';
+  /// license.rs'deki TRUSTED_PUBLIC_KEYS_HEX ile birebir aynı liste (2026-07-28
+  /// anahtar rotasyonu — bkz. Rust tarafındaki yorum). Önceden satılmış
+  /// lisansların çalışmaya devam etmesi için eski anahtar da geçiş dönemi
+  /// boyunca listede tutulur.
+  static const List<String> _trustedPublicKeysHex = [
+    '9830592b7b02e79c16efb19938343c9a826cb1bc0915098478e9c1e20d6bf925', // YENİ (2026-07-28+)
+    '1ed139b3e243e880de672ddb1883933a4292489f70f1c647914f7919c19e30fe', // ESKİ (sızmıştı — yalnızca geçiş dönemi için)
+  ];
   static const String _epoch = '2024-01-01';
 
-  static Uint8List _publicKeyBytes() {
-    final hex = _publicKeyHexRaw.substring(0, 64);
+  static Uint8List _publicKeyBytes(String hexRaw) {
+    final hex = hexRaw.substring(0, 64);
     final out = Uint8List(32);
     for (var i = 0; i < 32; i++) {
       out[i] = int.parse(hex.substring(i * 2, i * 2 + 2), radix: 16);
@@ -50,8 +53,10 @@ class LicenseService {
 
     if (payload[0] != 1) return null;
 
-    final publicKey = ed.PublicKey(_publicKeyBytes());
-    final valid = ed.verify(publicKey, payload, sig);
+    final valid = _trustedPublicKeysHex.any((hexRaw) {
+      final publicKey = ed.PublicKey(_publicKeyBytes(hexRaw));
+      return ed.verify(publicKey, payload, sig);
+    });
     if (!valid) return null;
 
     final device = payload.sublist(1, 7);
