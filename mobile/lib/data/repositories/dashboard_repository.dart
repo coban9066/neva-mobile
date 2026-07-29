@@ -5,6 +5,7 @@ class DashboardKpis {
   final int? todaySalesTotal;
   final int stockCount;
   final int? monthProfit;
+  final int? weekProfit;
   final int? cashBalance;
   final int totalPhones;
   final int pendingWarranty;
@@ -18,6 +19,7 @@ class DashboardKpis {
     this.todaySalesTotal,
     required this.stockCount,
     this.monthProfit,
+    this.weekProfit,
     this.cashBalance,
     required this.totalPhones,
     required this.pendingWarranty,
@@ -40,6 +42,8 @@ class DashboardRepository {
         (SELECT phone_count FROM v_stock_value) AS stock_count,
         (SELECT SUM(net_profit) FROM v_phone_profit
            WHERE strftime('%Y-%m', sale_date) = strftime('%Y-%m', 'now', 'localtime')) AS month_profit,
+        (SELECT SUM(net_profit) FROM v_phone_profit
+           WHERE date(sale_date) >= date('now','localtime','weekday 0','-6 days')) AS week_profit,
         (SELECT SUM(CASE WHEN direction = 'in' THEN amount ELSE -amount END)
            FROM till_entries WHERE method = 'cash') AS cash_balance,
         (SELECT COUNT(*) FROM phones WHERE deleted_at IS NULL) AS total_phones,
@@ -62,6 +66,7 @@ class DashboardRepository {
       todaySalesTotal: r['today_sales_total'] as int?,
       stockCount: (r['stock_count'] as int?) ?? 0,
       monthProfit: r['month_profit'] as int?,
+      weekProfit: r['week_profit'] as int?,
       cashBalance: r['cash_balance'] as int?,
       totalPhones: (r['total_phones'] as int?) ?? 0,
       pendingWarranty: (r['pending_warranty'] as int?) ?? 0,

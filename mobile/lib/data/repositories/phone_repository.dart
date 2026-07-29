@@ -48,6 +48,7 @@ class PhoneRepository {
       SELECT p.id, p.imei1, p.imei2, b.name AS brand_name, p.model AS model_name,
              p.color, p.storage_gb, p.cosmetic_grade, p.battery_health,
              p.status, p.region, p.notes, p.etiket_numarasi, p.warranty_until,
+             p.current_acquisition_id,
              (SELECT c.total_cost FROM v_phone_cost c WHERE c.acquisition_id = p.current_acquisition_id) AS total_cost
       FROM phones p
       LEFT JOIN brands b ON b.id = p.brand_id
@@ -72,6 +73,7 @@ class PhoneRepository {
       SELECT p.id, p.imei1, p.imei2, b.name AS brand_name, p.model AS model_name,
              p.color, p.storage_gb, p.cosmetic_grade, p.battery_health,
              p.status, p.region, p.notes, p.etiket_numarasi, p.warranty_until,
+             p.current_acquisition_id,
              (SELECT c.total_cost FROM v_phone_cost c WHERE c.acquisition_id = p.current_acquisition_id) AS total_cost
       FROM phones p LEFT JOIN brands b ON b.id = p.brand_id
       WHERE p.id = ?
@@ -271,6 +273,26 @@ class PhoneRepository {
         whereArgs: [phoneId],
       );
     });
+  }
+
+  /// Satış fişi için gerekli veriler (masaüstü Sales.tsx'in receipt sorgusunun
+  /// telefon bazlı, en son satışa daraltılmış hâli).
+  Future<Map<String, Object?>?> getSaleReceiptData(int phoneId) async {
+    final db = await _db;
+    final rows = await db.rawQuery('''
+      SELECT s.id, s.date, s.price, s.amount_paid, s.payment_method, s.commission_amount, p.imei1,
+             COALESCE(b.name || ' ' || p.model, 'Telefon #' || p.id) AS label,
+             COALESCE(s.contact_name, c.full_name) AS customer_name,
+             w.months AS warranty_months, w.type AS warranty_type
+      FROM sales s
+      JOIN phones p ON p.id = s.phone_id
+      LEFT JOIN brands b ON b.id = p.brand_id
+      LEFT JOIN contacts c ON c.id = s.contact_id
+      LEFT JOIN warranties w ON w.sale_id = s.id AND w.voided_at IS NULL
+      WHERE s.phone_id = ? AND s.deleted_at IS NULL
+      ORDER BY s.id DESC LIMIT 1
+    ''', [phoneId]);
+    return rows.isEmpty ? null : rows.first;
   }
 
   Future<void> updatePhoneImei(int phoneId, String? imei1) async {

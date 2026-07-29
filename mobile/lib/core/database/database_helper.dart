@@ -13,6 +13,13 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
 
   Database? _db;
+  String? _dbPath;
+
+  /// Canlı veritabanı dosyasının tam yolu (yedekleme/geri yükleme için).
+  Future<String> get dbPath async {
+    await database; // _dbPath'in dolduğundan emin ol
+    return _dbPath!;
+  }
 
   /// Sırayla uygulanacak migration dosyaları. Yeni bir masaüstü migration'ı
   /// Android'e de yansıtılacaksa buraya "003_...": "assets/migrations/003_....sql"
@@ -32,6 +39,7 @@ class DatabaseHelper {
   Future<Database> _open() async {
     final dir = await getApplicationDocumentsDirectory();
     final dbPath = p.join(dir.path, 'neva.db');
+    _dbPath = dbPath;
     final db = await openDatabase(
       dbPath,
       version: 1,

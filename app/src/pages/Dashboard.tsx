@@ -13,6 +13,7 @@ import {
   HandCoins,
   Eye,
   EyeOff,
+  TrendingUp,
 } from "lucide-react";
 import { selectOne, select } from "@/lib/db";
 import { formatKurusPrivate } from "@/lib/money";
@@ -28,6 +29,7 @@ interface Kpis {
   today_sales_total: number | null;
   stock_count: number;
   month_profit: number | null;
+  week_profit: number | null;
   cash_balance: number | null;
   total_phones: number;
   pending_warranty: number;
@@ -62,6 +64,8 @@ export function DashboardPage() {
           (SELECT phone_count FROM v_stock_value) AS stock_count,
           (SELECT SUM(net_profit) FROM v_phone_profit
              WHERE strftime('%Y-%m', sale_date) = strftime('%Y-%m', 'now', 'localtime')) AS month_profit,
+          (SELECT SUM(net_profit) FROM v_phone_profit
+             WHERE date(sale_date) >= date('now','localtime','weekday 0','-6 days')) AS week_profit,
           (SELECT SUM(CASE WHEN direction = 'in' THEN amount ELSE -amount END)
              FROM till_entries WHERE method = 'cash') AS cash_balance,
           (SELECT COUNT(*) FROM phones WHERE deleted_at IS NULL) AS total_phones,
@@ -100,6 +104,13 @@ export function DashboardPage() {
       label: "Bugünkü Kâr",
       value: formatKurusPrivate(kpis?.today_profit ?? 0, privacyMode),
       tone: profitTone(kpis?.today_profit),
+      to: "/kasa",
+    },
+    {
+      icon: TrendingUp,
+      label: "Bu Hafta Kâr",
+      value: formatKurusPrivate(kpis?.week_profit ?? 0, privacyMode),
+      tone: profitTone(kpis?.week_profit),
       to: "/kasa",
     },
     {

@@ -56,6 +56,7 @@ class PhoneRow {
   final String? etiketNumarasi;
   final String? notes;
   final String? warrantyUntil;
+  final int? currentAcquisitionId;
 
   PhoneRow({
     required this.id,
@@ -73,6 +74,7 @@ class PhoneRow {
     this.etiketNumarasi,
     this.notes,
     this.warrantyUntil,
+    this.currentAcquisitionId,
   });
 
   factory PhoneRow.fromMap(Map<String, Object?> m) => PhoneRow(
@@ -93,6 +95,7 @@ class PhoneRow {
         etiketNumarasi: m['etiket_numarasi'] as String?,
         notes: m['notes'] as String?,
         warrantyUntil: m['warranty_until'] as String?,
+        currentAcquisitionId: m['current_acquisition_id'] as int?,
       );
 
   String get title => '${brandName ?? ''} ${modelName ?? ''}'.trim();

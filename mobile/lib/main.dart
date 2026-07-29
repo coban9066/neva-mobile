@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'data/repositories/license_repository.dart';
 import 'presentation/screens/license/activation_screen.dart';
 import 'presentation/screens/license/license_required_screen.dart';
 import 'presentation/screens/app_shell.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ThemeController.instance.load();
   runApp(const NevaMobileApp());
 }
 
@@ -16,12 +18,16 @@ class NevaMobileApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'NEVA MOBILE',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      home: const LicenseGate(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeController.instance.mode,
+      builder: (context, mode, _) => MaterialApp(
+        title: 'NEVA MOBILE',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: mode,
+        home: const LicenseGate(),
+      ),
     );
   }
 }

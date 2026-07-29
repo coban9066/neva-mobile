@@ -22,7 +22,7 @@
 
 <br>
 
-### ⬇️ [**Windows Setup.exe**](https://github.com/coban9066/neva-mobile/releases/latest) &nbsp;·&nbsp; [**Windows 7 Setup.exe**](https://github.com/coban9066/neva-mobile/releases/tag/legacy-win7) &nbsp;·&nbsp; [**Android APK**](https://github.com/coban9066/neva-mobile/releases/tag/android-v1.0.0)
+### ⬇️ [**Windows Setup.exe**](https://github.com/coban9066/neva-mobile/releases/latest) &nbsp;·&nbsp; [**Windows 7 Setup.exe**](https://github.com/coban9066/neva-mobile/releases/tag/legacy-win7) &nbsp;·&nbsp; [**Android APK**](https://github.com/coban9066/neva-mobile/releases/tag/android-v1.1.0)
 
 **Platformunuza uygun bağlantıya tıklayarak son sürümü indirin.**
 
@@ -133,15 +133,18 @@ tasarlanan bağımsız bir mobil sürüm — masaüstüyle **aynı SQLite şemas
 ve **aynı Ed25519 lisans sistemini** paylaşır, tek lisansla her iki
 platformda da çalışır.
 
-**İlk sürümde (v1.0.0) bulunanlar:** Dashboard (Gizlilik Modu dahil),
-Telefonlar (Etiket No araması), Telefon Al (opsiyonel IMEI), Telefon Sat
-(kısmi ödeme desteği), Telefon Düzenle, Lisans Aktivasyonu. Kasa, Masraflar,
-Garanti Takibi, Bekleyen Ödemeler, PDF Raporlar ve otomatik güncelleme
-kontrolü sonraki sürümlerde geliyor.
+**v1.1.0 itibarıyla masaüstüyle tam özellik paritesinde:** Dashboard (grafikler,
+Son İşlemler, Gizlilik Modu), Telefonlar (Etiket No araması), Telefon Al/Sat/
+Düzenle (opsiyonel IMEI, kısmi ödeme desteği), Kasa, Masraflar, Garanti
+Takibi, Bekleyen Ödemeler, Veri Yönetimi (yedekleme/geri yükleme), PDF
+Raporlar (satış fişi + gün sonu raporu), WhatsApp paylaşımı, Ayarlar
+(açık/koyu tema, lisans yönetimi), Lisans Aktivasyonu. Yalnızca Android
+üzerinden otomatik güncelleme kontrolü henüz yok — yeni sürümler bu sayfadan
+manuel indirilir.
 
 **Gereksinim:** Android 7.0 (API 24) ve üzeri.
 
-### ⬇️ [**Android APK — v1.0.0'ı indir**](https://github.com/coban9066/neva-mobile/releases/tag/android-v1.0.0)
+### ⬇️ [**Android APK — v1.1.0'ı indir**](https://github.com/coban9066/neva-mobile/releases/tag/android-v1.1.0)
 
 <br>
 

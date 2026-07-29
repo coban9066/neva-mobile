@@ -1,7 +1,7 @@
 name: mobile
 description: "NEVA MOBILE — Android sürümü (Flutter). Masaüstü (Tauri/Rust) sürümüyle aynı SQLite şeması ve lisans algoritmasını paylaşır."
 publish_to: 'none'
-version: 1.0.1+2
+version: 1.1.0+3
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -28,22 +28,20 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
-  # --- FAZ 2'DE EKLENECEK (şu an kodda kullanılmıyor, bilinçli olarak dışarıda
-  # tutuldu — bkz. README "Faz durumu"). Bu Flutter sürümünde (3.44.8) bazı
-  # eklentiler (file_picker → flutter_plugin_android_lifecycle, printing →
-  # birçok androidx bağımlılığı) kendi android/build.gradle'larında eski/sabit
-  # bir compileSdk taşıyor ve proje genelinde override edilemiyor (denenen
-  # yöntemler: local.properties flutter.compileSdkVersion, app-level compileSdk,
-  # subprojects{} ve afterEvaluate{} zorlamaları — hiçbiri Flutter'ın kendi
-  # eklenti-yükleyicisinin dahil ettiği alt projelere ulaşamadı). Bu paketler
-  # gerçekten kullanılacağı fazda, o zamanki Flutter/AGP sürümüyle yeniden
-  # değerlendirilip eklenecek:
-  #   fl_chart          (Dashboard grafikleri)
-  #   pdf, printing      (PDF Raporlar)
-  #   share_plus         (WhatsApp paylaşımı)
-  #   http               (Android Auto Update — latest-android.json kontrolü)
-  #   package_info_plus  (uygulama sürümü)
-  #   url_launcher       (harici bağlantılar)
+  # Faz 2 (tam ozellik parite: grafikler, PDF, paylasim, yedekleme/geri yukleme)
+  fl_chart: ^0.69.0
+  pdf: ^3.11.1
+  share_plus: ^10.1.2
+  http: ^1.2.2
+  package_info_plus: ^8.1.1
+  url_launcher: ^6.3.1
+  # file_picker 8.x kendi android/build.gradle'inda compileSdk=34 sabitliyordu
+  # (transitive flutter_plugin_android_lifecycle >=36 istiyor -> derleme hatasi).
+  # 11.x ise "Built-in Kotlin" gerektiriyor, bu Flutter surumunde desteklenmiyor
+  # (GeneratedPluginRegistrant sinif bulamama hatasi). 10.x bandi ikisini de
+  # asiyor: compileSdk duzeltilmis + eski KGP modeliyle uyumlu. Ust siniri
+  # <11.0.0 olarak sabit tutuluyor, patch guncellemeleri serbest.
+  file_picker: ">=10.1.0 <11.0.0"
 
 dev_dependencies:
   flutter_test:

@@ -1,49 +1,39 @@
-# NEVA MOBILE v1.0.0 🎉
+# NEVA MOBILE v1.1.0 🎉
 
 **İndirme:** her platformun kendi release sayfası var —
-[Windows 10/11](https://github.com/coban9066/neva-mobile/releases/tag/v1.0.0) ·
+[Windows 10/11](https://github.com/coban9066/neva-mobile/releases/tag/v1.1.0) ·
 [Windows 7 Legacy](https://github.com/coban9066/neva-mobile/releases/tag/legacy-win7) ·
-[Android](https://github.com/coban9066/neva-mobile/releases/tag/android-v1.0.0)
+[Android](https://github.com/coban9066/neva-mobile/releases/tag/android-v1.1.0)
 
-**NEVA MOBILE artık Android'de de var.** Bu, ürünün ilk büyük dönüm noktası
-sürümü — Windows masaüstü uygulamasının yanına, aynı veritabanı yapısını ve
-aynı lisans sistemini paylaşan bağımsız bir Android sürümü ekleniyor.
+**NEVA MOBILE Android artık masaüstüyle tam özellik paritesinde.** v1.0.0'da
+temel akış (Dashboard, Telefonlar, Al/Sat) vardı; bu sürümle birlikte
+masaüstünde bulunan hiçbir özellik Android'de eksik değil.
 
-## 📱 Yeni: NEVA MOBILE Android
+## 📱 Android — Yeni Eklenenler
 
-- **Flutter (Material 3)** ile geliştirildi, dokunmatik kullanım için
-  sıfırdan tasarlandı — masaüstü ekranları birebir kopyalanmadı.
-- **Aynı SQLite şeması:** Masaüstünün bugünkü (v0.2.6) veritabanı yapısıyla
-  bire bir uyumlu — kendi migration sistemi var, gelecekteki güncellemeler
-  güvenle uygulanır.
-- **Aynı lisans sistemi:** Windows'taki Ed25519 imza algoritmasının birebir
-  Android portu. NEVA LICENSE MANAGER (geliştirici aracı) **değişmeden**
-  hem Windows (`NVM-XXXX-XXXX-XXXX`) hem Android (`ANDROID-XXXXXXXXXXXX`)
-  cihaz kimlikleri için kod üretebiliyor. Platform seçme ekranı yok — lisans
-  doğrulama mantığı tüm platformlarda aynı.
-- **Tamamen offline çalışır** — telefon ekleme, satış, kasa hesapları hep
-  yerel veritabanında; internet yalnızca lisans/güncelleme kontrolü için
-  kullanılır.
-- **Bu sürümde bulunanlar:** Dashboard (KPI kartları + Gizlilik Modu),
-  Telefonlar (liste, Etiket No araması), Telefon Al (IMEI opsiyonel),
-  Telefon Sat (kısmi ödeme desteği), Telefon Düzenle (IMEI/Etiket
-  Numarası yerinde düzenleme), Lisans Aktivasyonu.
-- **Sonraki sürümlerde gelecek:** Kasa, Masraflar, Garanti Takibi, Bekleyen
-  Ödemeler listesi, Dashboard grafikleri, Veri Yönetimi (Backup/Restore),
-  PDF Raporlar, Ayarlar ve Android üzerinden otomatik güncelleme kontrolü.
+- 💰 **Kasa** — gelir/gider defteri, nakit/POS/havale filtreleri, bugün/hafta/ay
+  özetleri, manuel gelir-gider girişi, CSV dışa aktarma
+- 🧾 **Masraflar** — telefon bazlı masraf ekleme/düzenleme/silme (kâr hesabına
+  otomatik yansır)
+- 🛡️ **Garanti Takibi** — aktif garantili telefonlar, "30 gün içinde bitecek"
+  filtresi
+- ⏳ **Bekleyen Ödemeler** — kısmi ödemeli satışlar, tek dokunuşla tahsilat
+- 📊 **Dashboard Grafikleri** — son aylar kâr grafiği, bu ay günlük kâr çizgisi,
+  Son İşlemler akışı
+- 🗂️ **Veri Yönetimi** — yedek alma/geri yükleme (.nevabackup), satış/alış
+  kayıtlarını temizleme
+- 📄 **PDF Raporlar** — satış fişi ve gün sonu raporu, doğrudan paylaşılabilir
+- 💬 **WhatsApp Paylaşımı** — masaüstüyle birebir aynı mesaj biçimi
+- ⚙️ **Ayarlar** — açık/koyu tema (kalıcı), lisans yönetimi, uygulama bilgisi
+- 🙈 Gizlilik Modu artık **kalıcı** — uygulamayı kapatıp açsanız da korunur
+
+Tüm bu ekranlar masaüstündeki iş kurallarının (SQL sorguları, doğrulamalar,
+hesaplamalar) birebir Flutter portu — ayrı bir mantık yazılmadı.
 
 ## 🖥️ Windows Sürümü
 
-Windows 10/11 ve Windows 7 Legacy sürümleri her zamanki gibi güncellendi ve
-bozulmadan çalışmaya devam ediyor. Son sürümlerde (v0.2.2 – v0.2.6) eklenen
-ve bu sürümde de yer alan özellikler:
-
-- 🏷️ Etiket Numarası sistemi (ekleme, düzenleme, Etiket No ile hızlı arama)
-- 📱 Opsiyonel IMEI — sonradan Telefon Detayı'ndan eklenebilir/değiştirilebilir
-- 💳 Eksik Ödeme / Bekleyen Tahsilat takibi (Kasa ve Dashboard'da görünür)
-- 🙈 Gizlilik Modu — tek tuşla tüm parasal değerleri maskele
-- 🐞 Kritik düzeltmeler: satılan telefonların Garanti ekranında görünmesi ve
-  etiket numarası benzersizlik kontrolündeki yanlış-pozitif hatası giderildi
+- 📈 Dashboard'a **"Bu Hafta Kâr"** kartı eklendi (Bugünkü Kâr ile Bu Ay Net
+  Kâr arasında, haftalık trend takibi için)
 
 ## Sistem Gereksinimleri
 - **Windows (Standart):** Windows 10 (1803+) / Windows 11, x64
